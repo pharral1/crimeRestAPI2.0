@@ -1,12 +1,10 @@
 Database needs:
-	Two tables:
-		crimes - populated, see model for detail
-		crimes_django - empty
+	One database:
+		Crimes - populated, see model for detai
 	User:
-		APIUser
-		Granted privileges all on both tables
+		'APIUser'@'localhost' identified by 'DjangoRestAPIUser1!';
+		Granted privileges on all tables in database
 Django needs:
 	User config for the granted user in settings.py in the project folder
 	Created model for the db in models.py made by command manage.py inspectdb --database=crimes
-	Router in crimeRestAPI that route to either django controlled default db or to the crime database depending on query
 Good site: https://datascience.blog.wzb.eu/2017/03/21/using-django-with-an-existinglegacy-database/
