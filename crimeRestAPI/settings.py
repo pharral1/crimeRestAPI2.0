@@ -80,14 +80,7 @@ REST_FRAMEWORK = {
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crimes_django',
-        'USER': 'APIUser',
-        'PASSWORD': 'DjangoRestAPIUser1!',
-        "HOST": "localhost"
-    },
-    'Crime':{
+    'default':{
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'Crime',
         'USER': 'APIUser',
@@ -95,9 +88,6 @@ DATABASES = {
         "HOST": "localhost"
     }
 }
-
-DATABASE_ROUTERS = ['crimeRestAPI.database_routers.CrimeDbRouter']
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
