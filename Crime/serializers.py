@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from .models import Crime
+from .models import Crimeinstances
 
 class CrimeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Crime
+        model = Crimeinstances
         fields = ("__all__")
