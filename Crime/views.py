@@ -2,9 +2,10 @@ from django.shortcuts import render
 
 from .models import Crimeinstances
 from rest_framework import viewsets
-from .serializers import CrimeSerializer
+from .serializers import CrimeSerializer, WeaponSerializer
 from rest_framework.exceptions import *
-from django.db.models.manager import Manager 
+from django.db.models.manager import Manager
+from rest_framework.response import Response
 # Create your views here.
 
 class CrimeViewSet(viewsets.ModelViewSet):
@@ -46,9 +47,40 @@ class CrimeViewSet(viewsets.ModelViewSet):
             #appending a __range to the crime date value calls a built in range class
             queryset = queryset.filter(crimedate__range=date_range)
 
-        date_lt = self.request.query_params.get("date_lt", None)
-        if date_lt is not None:
-            queryset = queryset.filter(crimedate__lt=date_lt)
+        date_lte = self.request.query_params.get("date_lte", None)
+        if date_lte is not None:
+            queryset = queryset.filter(crimedate__lte=date_lte)
+
+        date_gte = self.request.query_params.get("date_gte", None)
+        if date_gte is not None:
+            queryset = queryset.filter(crimedate__gte=date_gte)
+
+        #year parsing
+        year = self.request.query_params.get("year", None)
+        if year is not None:
+            if not isinstance(year, int):
+                raise ParseError("Bad parameters, year must be int")
+            queryset = queryset.filter(crimedate__year=year)
+
+        #month parsing
+        month = self.request.query_params.get("month", None)
+        if month is not None:
+            if not isinstance(month, int):
+                raise ParseError("Bad parameters, month must be int")
+            queryset = queryset.filter(crimedate__month=month)
+
+        #day parsing
+        day = self.request.query_params.get("day", None)
+        if day is not None:
+            if not isinstance(day, int):
+                raise ParseError("Bad parameters, day must be int")
+            queryset = queryset.filter(crimedate__day=day)
+
+        #weapon parsing
+        weapon = self.request.query_params.get("weapon", None)
+        if weapon is not None:
+            queryset = queryset.filter(weapon=weapon)
+        
 
         #if query set has not been modified by here, then no filtering has been done,
         #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
@@ -57,7 +89,16 @@ class CrimeViewSet(viewsets.ModelViewSet):
 
         queryset.order_by("id")
         return queryset
+
+class WeaponViewSet(viewsets.ModelViewSet):
+    serializer_class = WeaponSerializer
+    queryset = Crimeinstances.objects.order_by().values("weapon").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct weapons without the empty string
+        return Response(self.queryset.values_list('weapon', flat=True).exclude(weapon=""))
     
-class CrimeInsideViewSet(viewsets.ModelViewSet):
-    queryset = Crimeinstances.objects.raw("select * from CrimeInstances where inside_outside = 'I'")
-    serializer_class = CrimeSerializer
