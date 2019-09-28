@@ -11,11 +11,28 @@ from rest_framework.response import Response
 class CrimeViewSet(viewsets.ModelViewSet):
     #queryset = Crimeinstances.objects.raw('SELECT * FROM CrimeInstances;')
     serializer_class = CrimeSerializer
+    valid_crime_params = ["page",
+                          "inside_outside",
+                          "crimedate",
+                          "date_range",
+                          "date_lte",
+                          "date_gte",
+                          "year",
+                          "month",
+                          "day",
+                          "weapon"]
+    
 
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all
         queryset = Crimeinstances.objects
+
+        param_keys = self.request.query_params.keys()
+
+        for key in param_keys:
+            if key not in self.valid_crime_params:
+                raise ParseError("Bad parameter: %s" % key)
 
         #if there are no query params and/or there are no query parameters
         #plus a page number, get all, and allow for pagination still
@@ -80,6 +97,7 @@ class CrimeViewSet(viewsets.ModelViewSet):
         weapon = self.request.query_params.get("weapon", None)
         if weapon is not None:
             queryset = queryset.filter(weapon=weapon)
+        
         
 
         #if query set has not been modified by here, then no filtering has been done,
