@@ -75,21 +75,27 @@ class CrimeViewSet(viewsets.ModelViewSet):
         #year parsing
         year = self.request.query_params.get("year", None)
         if year is not None:
-            if not isinstance(year, int):
+            try:
+                year = int(year)
+            except:
                 raise ParseError("Bad parameters, year must be int")
             queryset = queryset.filter(crimedate__year=year)
 
         #month parsing
         month = self.request.query_params.get("month", None)
         if month is not None:
-            if not isinstance(month, int):
+            try:
+                month = int(month)
+            except:
                 raise ParseError("Bad parameters, month must be int")
             queryset = queryset.filter(crimedate__month=month)
 
         #day parsing
         day = self.request.query_params.get("day", None)
         if day is not None:
-            if not isinstance(day, int):
+            try:
+                day = int(day)
+            except:
                 raise ParseError("Bad parameters, day must be int")
             queryset = queryset.filter(crimedate__day=day)
 
