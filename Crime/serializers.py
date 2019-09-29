@@ -11,3 +11,8 @@ class WeaponSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("weapon",)
+
+class NeighborhoodSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("neighborhood",)

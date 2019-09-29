@@ -2,7 +2,7 @@ from django.shortcuts import render
 
 from .models import Crimeinstances
 from rest_framework import viewsets
-from .serializers import CrimeSerializer, WeaponSerializer
+from .serializers import CrimeSerializer, WeaponSerializer, NeighborhoodSerializer
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
@@ -125,4 +125,17 @@ class WeaponViewSet(viewsets.ModelViewSet):
 
         #return a flat list of distinct weapons without the empty string
         return Response(self.queryset.values_list('weapon', flat=True).exclude(weapon=""))
+
     
+class NeighborhoodViewSet(viewsets.ModelViewSet):
+    serializer_class = NeighborhoodSerializer
+    queryset = Crimeinstances.objects.order_by().values("neighborhood").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct weapons without the empty string
+        return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood=""))
+

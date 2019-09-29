@@ -5,6 +5,7 @@ from . import views
 router = routers.DefaultRouter()
 router.register(r'crimeinstances', views.CrimeViewSet, "crimeinstances")
 router.register(r'weapons', views.WeaponViewSet, "weapons")
+router.register(r'neighborhoods', views.NeighborhoodViewSet, "neighborhoods")
 urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
