@@ -6,12 +6,12 @@ from .serializers import CrimeSerializer, WeaponSerializer, NeighborhoodSerializ
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
-# Create your views here.
 
 class CrimeViewSet(viewsets.ModelViewSet):
     #queryset = Crimeinstances.objects.raw('SELECT * FROM CrimeInstances;')
     serializer_class = CrimeSerializer
     valid_crime_params = ["page",
+                          "format",
                           "inside_outside",
                           "crimedate",
                           "date_range",
@@ -25,8 +25,10 @@ class CrimeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
 
-        #prepare queryset object to allow function calls on it but not getting all
+        #prepare queryset object to allow function calls on it but not getting all items in dataset
+        #this will only work when the commented out block for page and format works
         queryset = Crimeinstances.objects
+        #queryset = Crimeinstances.objects.all()
 
         param_keys = self.request.query_params.keys()
 
@@ -35,12 +37,14 @@ class CrimeViewSet(viewsets.ModelViewSet):
                 raise ParseError("Bad parameter: %s" % key)
 
         #if there are no query params and/or there are no query parameters
-        #plus a page number, get all, and allow for pagination still
+        #plus a page number or format type, get all, and allow for pagination or formatting still
         if not self.request.query_params.keys() or \
-           ("page" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1):
+           ("page" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
+           ("format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
+           ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
             queryset = Crimeinstances.objects.all()
-
+        
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
@@ -103,8 +107,6 @@ class CrimeViewSet(viewsets.ModelViewSet):
         weapon = self.request.query_params.get("weapon", None)
         if weapon is not None:
             queryset = queryset.filter(weapon=weapon)
-        
-        
 
         #if query set has not been modified by here, then no filtering has been done,
         #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
@@ -123,8 +125,8 @@ class WeaponViewSet(viewsets.ModelViewSet):
         #original example has the following, but the below works just as well without the second filter call
         #query set = self.filter_queryset(self.get_queryset())
 
-        #return a flat list of distinct weapons without the empty string
-        return Response(self.queryset.values_list('weapon', flat=True).exclude(weapon=""))
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
 
     
 class NeighborhoodViewSet(viewsets.ModelViewSet):
@@ -136,6 +138,6 @@ class NeighborhoodViewSet(viewsets.ModelViewSet):
         #original example has the following, but the below works just as well without the second filter call
         #query set = self.filter_queryset(self.get_queryset())
 
-        #return a flat list of distinct weapons without the empty string
+        #return a flat list of distinct values without the empty string
         return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood=""))
 
