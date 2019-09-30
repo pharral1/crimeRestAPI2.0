@@ -1,5 +1,7 @@
 from django.shortcuts import render
 
+from rest_framework.schemas import AutoSchema
+import coreapi
 from .models import Crimeinstances
 from rest_framework import viewsets
 from .serializers import CrimeSerializer, WeaponSerializer, NeighborhoodSerializer
@@ -7,9 +9,44 @@ from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
 
+crime_params_description = {"inside_outside": 'Location, either "inside" or "outside" of a building.',
+                            "crime_date": 'Date the crime was committed, must be in YYYY-MM-DD format.',
+                            "date_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
+                            "date_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
+                            "date_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
+                            "year": "A year in YYYY integer format.",
+                            "month": "A month in MM integer format.",
+                            "day": "A day in DD integer format.",
+                            "weapon": "A weapon, must be one of the enumerated types.",
+                            "location": "A street address, do not include anything after the street.",
+                            "latitude": "Latitude, in float format.",
+                            "latitude_lte": "Latitude, in float format. Will return all latitudes less or equal to the specified value.",
+                            "latitude_gte": "Latitude, in float format. Will return all latitudes greater or equal to the specified value.",
+                            "latitude_range": "A range of latitudes in float,float format.",
+                            "longitude": "Longitude, in float format.",
+                            "longitude_lte": "Longitude, in float format. Will return all longitudes less or equal to the specified value.",
+                            "longitude_gte": "Longitude, in float format. Will return all longitudes greater or equal to the specified value.",
+                            "longitude_range": "A range of longitudes in float,float format.",
+                            "post": "A Police post number, must be an integer",
+                            "district": "A Police district string.",
+                           }
+
+def generate_swagger_schema(description_dict):
+        manual_fields = []
+        for field_name in description_dict:
+            field = coreapi.Field(field_name,
+                                  required=False,
+                                  location='query',
+                                  description=description_dict[field_name]
+                                 )
+            manual_fields.append(field)
+        return AutoSchema(manual_fields=manual_fields)
+
+
 class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     #queryset = Crimeinstances.objects.raw('SELECT * FROM CrimeInstances;')
     serializer_class = CrimeSerializer
+    
     valid_crime_params = ["page",
                           "format",
                           "inside_outside",
@@ -34,8 +71,10 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "district",
                           ]
 
+    schema = generate_swagger_schema(crime_params_description)
     
-    all_location_params = ["location",
+    all_location_params = ["inside_outside",
+                           "location",
                            "latitude",
                            "latitude_lte",
                            "latitude_gte",
@@ -47,6 +86,14 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                            "post",
                            "district",
                           ]
+    all_date_params = ["crimedate",
+                       "date_range",
+                       "date_lte",
+                       "date_gte",
+                       "year",
+                       "month",
+                       "day"
+                      ]
     
 
     def get_queryset(self):
@@ -72,9 +119,12 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
 
 
             
-        if any(element in self.valid_crime_params for element in self.all_location_params):
+        if any(element in self.all_location_params for element in param_keys):
             queryset = self.parse_location(queryset)
-        queryset = self.parse_date(queryset)
+
+        if any(element in self.all_date_params for element in param_keys):    
+            queryset = self.parse_date(queryset)
+
         queryset = self.parse_details(queryset)
         
         #if query set has not been modified by here, then no filtering has been done,
@@ -86,6 +136,8 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
     
     def parse_location(self, queryset):
+        print("Found location parameter")
+
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
@@ -192,7 +244,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             try:
                 float(longitude_gte)
             except:
-                raise ParseError("Bad parameters, longitude must provide a float")
+                raise ParseError("Bad parameters, longitude_gte must provide a float")
             queryset = queryset.filter(longitude__gte=longitude_gte)
 
         #district parsing
@@ -203,6 +255,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
     
     def parse_date(self, queryset):
+        print("Found date parameter")
         #crime date parsing
         base_date = self.request.query_params.get('crimedate', None)
         if base_date is not None:

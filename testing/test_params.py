@@ -16,11 +16,11 @@ valid_crime_params = ["page=2",
                       "latitude_range=39.30035681,39.30045681",
                       "latitude_lte=39.30035681",
                       "latitude_gte=39.30035681",
-                      "longitude=39.30035681",
-                      "longitude_range=39.30035681,39.30045681",
-                      "longitude_lte=39.30035681",
-                      "longitude_gte=39.30035681",
-                      "district= WESTERN",
+                      "longitude=-76.64448510",
+                      "longitude_range=-76.64448510,-75.64448510",
+                      "longitude_lte=-76.64448510",
+                      "longitude_gte=-76.64448510",
+                      "district=WESTERN",
                       ]
 
 def main():
