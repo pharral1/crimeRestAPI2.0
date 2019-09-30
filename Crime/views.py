@@ -7,7 +7,7 @@ from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
 
-class CrimeViewSet(viewsets.ModelViewSet):
+class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     #queryset = Crimeinstances.objects.raw('SELECT * FROM CrimeInstances;')
     serializer_class = CrimeSerializer
     valid_crime_params = ["page",
@@ -263,7 +263,7 @@ class CrimeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-class WeaponViewSet(viewsets.ModelViewSet):
+class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
     queryset = Crimeinstances.objects.values("weapon").distinct()
 
@@ -277,7 +277,7 @@ class WeaponViewSet(viewsets.ModelViewSet):
         return Response(self.queryset.values_list('weapon', flat=True).extra(select={'weapon': "CAST(weapon AS CHAR)"}).order_by("weapon").exclude(weapon=""))
 
     
-class NeighborhoodViewSet(viewsets.ModelViewSet):
+class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NeighborhoodSerializer
     queryset = Crimeinstances.objects.order_by().values("neighborhood").distinct()
 
