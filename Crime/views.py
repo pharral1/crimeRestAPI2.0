@@ -20,13 +20,38 @@ class CrimeViewSet(viewsets.ModelViewSet):
                           "year",
                           "month",
                           "day",
-                          "weapon"]
+                          "weapon",
+                          "location",
+                          "latitude",
+                          "latitude_lte",
+                          "latitude_gte",
+                          "latitude_range",
+                          "longitude",
+                          "longitude_lte",
+                          "longitude_gte",
+                          "longitude_range",
+                          "post",
+                          "district",
+                          ]
+
+    
+    all_location_params = ["location",
+                           "latitude",
+                           "latitude_lte",
+                           "latitude_gte",
+                           "latitude_range",
+                           "longitude",
+                           "longitude_lte",
+                           "longitude_gte",
+                           "longitude_range",
+                           "post",
+                           "district",
+                          ]
     
 
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        #this will only work when the commented out block for page and format works
         queryset = Crimeinstances.objects
         #queryset = Crimeinstances.objects.all()
 
@@ -44,7 +69,23 @@ class CrimeViewSet(viewsets.ModelViewSet):
            ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
             queryset = Crimeinstances.objects.all()
+
+
+            
+        if any(element in self.valid_crime_params for element in self.all_location_params):
+            queryset = self.parse_location(queryset)
+        queryset = self.parse_date(queryset)
+        queryset = self.parse_details(queryset)
         
+        #if query set has not been modified by here, then no filtering has been done,
+        #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
+        if isinstance(queryset, Manager):
+            raise ParseError("Bad parameters")
+
+        queryset.order_by("id")
+        return queryset
+    
+    def parse_location(self, queryset):
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
@@ -54,8 +95,114 @@ class CrimeViewSet(viewsets.ModelViewSet):
             elif inside_outside == "outside":
                 queryset = queryset.filter(inside_outside="O")
             else:
-                return None
+                raise ParseError("Bad parameters, inside_outside must be 'inside' or 'outside'")
 
+        #post parsing    
+        post = self.request.query_params.get("post", None)
+        if post is not None:
+            try:
+                int(post)
+            except:
+                raise ParseError("Bad parameters, post must be an int")
+            queryset = queryset.filter(post=post)
+
+        #location parsing
+        #locations will contain spaces within them, these can be encoded in the url as %20 or the + character (latter is unsafe)
+        #eg: <url>?location=4300%20DAVIS%20AVE OR <url>?location=4300+DAVIS+AVE
+        location = self.request.query_params.get("location", None)
+        if location is not None:
+            queryset = queryset.filter(location=location)
+
+        #latitude parsing
+        latitude = self.request.query_params.get("latitude", None)
+        if latitude is not None:
+            queryset = queryset.filter(latitude=latitude)
+
+        #latitude range parsing, split two latitudes on a range
+        latitude_range = self.request.query_params.get("latitude_range", None)
+        if latitude_range is not None:
+            latitude_range = latitude_range.split(",")
+                        
+            if "" in latitude_range:
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
+            if len(latitude_range) != 2:
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
+
+            try:
+                for i in latitude_range:
+                    float(i)
+            except:
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
+            
+            #appending a __range to the crime date value calls a built in range class
+            queryset = queryset.filter(latitude__range=latitude_range)
+
+        #latitude greater than and less than parsing
+        latitude_lte = self.request.query_params.get("latitude_lte", None)
+        if latitude_lte is not None:
+            try:
+                float(latitude_lte)
+            except:
+                raise ParseError("Bad parameters, latitude must provide a float")
+            queryset = queryset.filter(latitude__lte=latitude_lte)
+
+        latitude_gte = self.request.query_params.get("latitude_gte", None)
+        if latitude_gte is not None:
+            try:
+                float(latitude_gte)
+            except:
+                raise ParseError("Bad parameters, latitude must provide a float")
+            queryset = queryset.filter(latitude__gte=latitude_gte)
+
+        #longitude parsing
+        longitude = self.request.query_params.get("longitude", None)
+        if longitude is not None:
+            queryset = queryset.filter(longitude=longitude)
+
+        #longitude range parsing, split two longitudes on a range
+        longitude_range = self.request.query_params.get("longitude_range", None)
+        if longitude_range is not None:
+            longitude_range = longitude_range.split(",")
+                        
+            if "" in longitude_range:
+                raise ParseError("Bad parameters, longitude_range must provide two floats")
+            if len(longitude_range) != 2:
+                raise ParseError("Bad parameters, longitude_range must provide two floats")
+
+            try:
+                for i in longitude_range:
+                    float(i)
+            except:
+                raise ParseError("Bad parameters, longitude_range must provide two floats")
+            
+            #appending a __range to the crime date value calls a built in range class
+            queryset = queryset.filter(longitude__range=longitude_range)
+
+        #longitude greater than and less than parsing
+        longitude_lte = self.request.query_params.get("longitude_lte", None)
+        if longitude_lte is not None:
+            try:
+                float(longitude_lte)
+            except:
+                raise ParseError("Bad parameters, longitude must provide a float")
+            queryset = queryset.filter(longitude__lte=longitude_lte)
+
+        longitude_gte = self.request.query_params.get("longitude_gte", None)
+        if longitude_gte is not None:
+            try:
+                float(longitude_gte)
+            except:
+                raise ParseError("Bad parameters, longitude must provide a float")
+            queryset = queryset.filter(longitude__gte=longitude_gte)
+
+        #district parsing
+        district = self.request.query_params.get("district", None)
+        if district is not None:
+            queryset = queryset.filter(district=district)
+            
+        return queryset
+    
+    def parse_date(self, queryset):
         #crime date parsing
         base_date = self.request.query_params.get('crimedate', None)
         if base_date is not None:
@@ -65,6 +212,8 @@ class CrimeViewSet(viewsets.ModelViewSet):
         date_range = self.request.query_params.get("date_range", None)
         if date_range is not None:
             date_range = date_range.split(",")
+            if len(date_range) != 2:
+                raise ParseError("Bad parameters, date_range must provide date values")
             #appending a __range to the crime date value calls a built in range class
             queryset = queryset.filter(crimedate__range=date_range)
 
@@ -103,22 +252,20 @@ class CrimeViewSet(viewsets.ModelViewSet):
                 raise ParseError("Bad parameters, day must be int")
             queryset = queryset.filter(crimedate__day=day)
 
+        return queryset
+
+    def parse_details(self, queryset):
+        
         #weapon parsing
         weapon = self.request.query_params.get("weapon", None)
         if weapon is not None:
             queryset = queryset.filter(weapon=weapon)
 
-        #if query set has not been modified by here, then no filtering has been done,
-        #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
-        if isinstance(queryset, Manager):
-            raise ParseError("Bad parameters")
-
-        queryset.order_by("id")
         return queryset
 
 class WeaponViewSet(viewsets.ModelViewSet):
     serializer_class = WeaponSerializer
-    queryset = Crimeinstances.objects.order_by().values("weapon").distinct()
+    queryset = Crimeinstances.objects.values("weapon").distinct()
 
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
@@ -126,7 +273,8 @@ class WeaponViewSet(viewsets.ModelViewSet):
         #query set = self.filter_queryset(self.get_queryset())
 
         #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
+        #currently need to cast weapon as char through extra() call as weapon is stored as an ENUM and sort works on an enum index basis in SQL
+        return Response(self.queryset.values_list('weapon', flat=True).extra(select={'weapon': "CAST(weapon AS CHAR)"}).order_by("weapon").exclude(weapon=""))
 
     
 class NeighborhoodViewSet(viewsets.ModelViewSet):

@@ -1,0 +1,3 @@
+Some characters cannot be placed in a url without affecting the destination of the request.
+In cases such as this, examine this document for reference:
+https://www.w3schools.com/tags/ref_urlencode.asp
