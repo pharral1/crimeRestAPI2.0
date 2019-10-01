@@ -4,13 +4,13 @@ from rest_framework.schemas import AutoSchema
 import coreapi
 from .models import Crimeinstances
 from rest_framework import viewsets
-from .serializers import CrimeSerializer, WeaponSerializer, NeighborhoodSerializer
+from .serializers import CrimeSerializer, WeaponSerializer, NeighborhoodSerializer, CountSerializer
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
 
 crime_params_description = {"inside_outside": 'Location, either "inside" or "outside" of a building.',
-                            "crime_date": 'Date the crime was committed, must be in YYYY-MM-DD format.',
+                            "crimedate": 'Date the crime was committed, must be in YYYY-MM-DD format.',
                             "date_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
                             "date_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
                             "date_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
@@ -30,6 +30,10 @@ crime_params_description = {"inside_outside": 'Location, either "inside" or "out
                             "post": "A Police post number, must be an integer",
                             "district": "A Police district string.",
                             "neighborhood": "The neighborhood where the crime took place.",
+                            "premise": "The type of premise the crime took place in.",
+                            "crimecode": "The code used to describe the crime.",
+                            "description": "The description of the crime.",
+                            "crimetime": "The time at which the crime occurred in HH:MM:SS format.",
                            }
 
 def generate_swagger_schema(description_dict):
@@ -45,7 +49,7 @@ def generate_swagger_schema(description_dict):
 
 
 class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
-    #queryset = Crimeinstances.objects.raw('SELECT * FROM CrimeInstances;')
+    
     serializer_class = CrimeSerializer
     
     valid_crime_params = ["page",
@@ -69,8 +73,12 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "longitude_range",
                           "neighborhood",
                           "post",
+                          "premise",
                           "district",
                           "weapon",
+                          "crimecode",
+                          "description",
+                          "crimetime",
                           ]
 
     schema = generate_swagger_schema(crime_params_description)
@@ -88,6 +96,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                            "neighborhood",
                            "post",
                            "district",
+                           "premise",
                           ]
     
     all_date_params = ["crimedate",
@@ -98,6 +107,11 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                        "month",
                        "day"
                       ]
+    all_details_params = ["weapon",
+                          "crimecode",
+                          "description",
+                          "crimetime"
+                         ]
     
 
     def get_queryset(self):
@@ -127,7 +141,8 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         if any(element in self.all_date_params for element in param_keys):    
             queryset = self.parse_date(queryset)
 
-        queryset = self.parse_details(queryset)
+        if any(element in self.all_details_params for element in param_keys):
+            queryset = self.parse_details(queryset)
         
         #if query set has not been modified by here, then no filtering has been done,
         #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
@@ -257,6 +272,10 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         neighborhood = self.request.query_params.get("neighborhood", None)
         if neighborhood is not None:
             queryset = queryset.filter(neighborhood=neighborhood)
+
+        premise = self.request.query_params.get("premise", None)
+        if premise is not None:
+            queryset = queryset.filter(premise=premise)
             
         return queryset
     
@@ -320,6 +339,21 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         if weapon is not None:
             queryset = queryset.filter(weapon=weapon)
 
+        #crimecode parsing
+        crimecode = self.request.query_params.get("crimecode")
+        if crimecode is not None:
+            queryset = queryset.filter(crimecode=crimecode)
+
+        #description parsing
+        description = self.request.query_params.get("description")
+        if description is not None:
+            queryset = queryset.filter(description=description)
+
+        #crimetime parsing
+        crimetime = self.request.query_params.get("crimetime")
+        if crimetime is not None:
+            queryset = queryset.filter(crimetime=crimetime)
+
         return queryset
 
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
@@ -347,4 +381,53 @@ class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
 
         #return a flat list of distinct values without the empty string
         return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood=""))
+
+class CountViewSet(viewsets.ReadOnlyModelViewSet):
+
+    serializer_class = CountSerializer
+    queryset = Crimeinstances.objects.all()
+    
+    valid_count_param_keys = ["crimedate",
+                              "crimetime",
+                              "crimecode",
+                              "location",
+                              "description",
+                              "inside_outside",
+                              "weapon",
+                              "post",
+                              "district",
+                              "neighborhood",
+                              "longitude",
+                              "latitude",
+                              "location1",
+                              "premise",
+                             ]
+    def list(self, request, *args, **kwargs):
+        search_key = self.request.query_params.keys()
+
+        if len(search_key) != 1:
+            raise ParseError("Bad parameters, can only count one at a time")
+
+        search_key = list(self.request.query_params.keys())[0]
+        print(search_key)
+        if search_key not in self.valid_count_param_keys:
+            raise ParseError("Bad parameters, must specify column in database")
+
+        
+        
+ 
+        search_value = self.request.query_params[search_key]
+        if search_key == "inside_outside":
+            if search_value == "inside":
+                search_value = "I"
+            elif search_value == "outside":
+                search_value = "O"
+        
+        search_filter = {search_key: search_value}
+        print(search_filter)
+        count = self.queryset.filter(**search_filter).count()
+        
+
+        return Response(count)
+
 

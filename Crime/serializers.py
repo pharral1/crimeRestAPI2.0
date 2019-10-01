@@ -16,3 +16,7 @@ class NeighborhoodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("neighborhood",)
+class CountSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("__all__")
