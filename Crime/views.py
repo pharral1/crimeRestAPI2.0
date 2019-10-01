@@ -29,6 +29,7 @@ crime_params_description = {"inside_outside": 'Location, either "inside" or "out
                             "longitude_range": "A range of longitudes in float,float format.",
                             "post": "A Police post number, must be an integer",
                             "district": "A Police district string.",
+                            "neighborhood": "The neighborhood where the crime took place.",
                            }
 
 def generate_swagger_schema(description_dict):
@@ -57,7 +58,6 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "year",
                           "month",
                           "day",
-                          "weapon",
                           "location",
                           "latitude",
                           "latitude_lte",
@@ -67,8 +67,10 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "longitude_lte",
                           "longitude_gte",
                           "longitude_range",
+                          "neighborhood",
                           "post",
                           "district",
+                          "weapon",
                           ]
 
     schema = generate_swagger_schema(crime_params_description)
@@ -83,9 +85,11 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                            "longitude_lte",
                            "longitude_gte",
                            "longitude_range",
+                           "neighborhood",
                            "post",
                            "district",
                           ]
+    
     all_date_params = ["crimedate",
                        "date_range",
                        "date_lte",
@@ -116,8 +120,6 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
            ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
             queryset = Crimeinstances.objects.all()
-
-
             
         if any(element in self.all_location_params for element in param_keys):
             queryset = self.parse_location(queryset)
@@ -251,6 +253,10 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         district = self.request.query_params.get("district", None)
         if district is not None:
             queryset = queryset.filter(district=district)
+
+        neighborhood = self.request.query_params.get("neighborhood", None)
+        if neighborhood is not None:
+            queryset = queryset.filter(neighborhood=neighborhood)
             
         return queryset
     
