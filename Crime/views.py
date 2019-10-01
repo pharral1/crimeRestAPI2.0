@@ -36,6 +36,7 @@ crime_params_description = {"inside_outside": 'Location, either "inside" or "out
                             "crimetime": "The time at which the crime occurred in HH:MM:SS format.",
                            }
 
+#generates the AutoSchema used by swagger from a {parameter: description} dictionary (see above)
 def generate_swagger_schema(description_dict):
         manual_fields = []
         for field_name in description_dict:
@@ -405,8 +406,10 @@ class CountViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         search_key = self.request.query_params.keys()
 
-        if len(search_key) != 1:
+        if len(search_key) > 1:
             raise ParseError("Bad parameters, can only count one at a time")
+        elif len(search_key) == 0:
+            raise ParseError("Must provide a parameter with a key equal to a column in the crime db and a value equal to a value in that column.")
 
         search_key = list(self.request.query_params.keys())[0]
         print(search_key)
