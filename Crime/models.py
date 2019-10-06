@@ -11,11 +11,34 @@ from django.db import models
 class Crimeinstances(models.Model):
     crimedate = models.DateField(db_column='crimeDate', blank=True, null=True)  # Field name made lowercase.
     crimetime = models.TimeField(db_column='crimeTime', blank=True, null=True)  # Field name made lowercase.
-    crimecode = models.CharField(db_column='crimeCode', max_length=2, blank=True, null=True)  # Field name made lowercase.
+    crimetype = models.ForeignKey('Crimetypes', models.DO_NOTHING, db_column='crimeType', blank=True, null=True)  # Field name made lowercase.
+    weapon = models.CharField(max_length=64, blank=True, null=True)
+    total_incidents = models.IntegerField(blank=True, null=True)
+    crimeid = models.IntegerField(db_column='crimeId', primary_key=True)  # Field name made lowercase.
+
+    class Meta:
+        managed = False
+        db_table = 'CrimeInstances'
+
+
+class Crimetypes(models.Model):
+    crimecode = models.CharField(db_column='crimeCode', max_length=4)  # Field name made lowercase.
+    description = models.CharField(max_length=64, blank=True, null=True)
+    typeid = models.AutoField(db_column='typeId', primary_key=True)  # Field name made lowercase.
+
+    class Meta:
+        managed = False
+        db_table = 'CrimeTypes'
+
+
+class Inputdata(models.Model):
+    crimedate = models.DateField(db_column='crimeDate', blank=True, null=True)  # Field name made lowercase.
+    crimetime = models.TimeField(db_column='crimeTime', blank=True, null=True)  # Field name made lowercase.
+    crimecode = models.CharField(db_column='crimeCode', max_length=4, blank=True, null=True)  # Field name made lowercase.
     location = models.CharField(max_length=64, blank=True, null=True)
     description = models.CharField(max_length=64, blank=True, null=True)
-    inside_outside = models.CharField(max_length=1, blank=True, null=True)
-    weapon = models.CharField(max_length=7, blank=True, null=True)
+    inside_outside = models.CharField(max_length=7, blank=True, null=True)
+    weapon = models.CharField(max_length=64, blank=True, null=True)
     post = models.IntegerField(blank=True, null=True)
     district = models.CharField(max_length=64, blank=True, null=True)
     neighborhood = models.CharField(max_length=64, blank=True, null=True)
@@ -25,31 +48,29 @@ class Crimeinstances(models.Model):
     premise = models.CharField(max_length=48, blank=True, null=True)
     vri_name1 = models.CharField(max_length=64, blank=True, null=True)
     total_incidents = models.IntegerField(blank=True, null=True)
+    crimeid = models.AutoField(db_column='crimeId', primary_key=True)  # Field name made lowercase.
 
     class Meta:
         managed = False
-        db_table = 'CrimeInstances'
+        db_table = 'InputData'
 
 
-class Crimelocations(models.Model):
-    location = models.CharField(primary_key=True, max_length=64)
-    latitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+class Locationdata(models.Model):
+    location = models.CharField(max_length=64)
+    inside_outside = models.CharField(max_length=7, blank=True, null=True)
+    post = models.IntegerField(blank=True, null=True)
+    district = models.CharField(max_length=64, blank=True, null=True)
+    neighborhood = models.CharField(max_length=64, blank=True, null=True)
     longitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
-    inside_outside = models.CharField(max_length=1, blank=True, null=True)
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+    location1 = models.CharField(max_length=48, blank=True, null=True)
     premise = models.CharField(max_length=48, blank=True, null=True)
+    vri_name1 = models.CharField(max_length=64, blank=True, null=True)
+    crimeid = models.IntegerField(db_column='crimeId', primary_key=True)  # Field name made lowercase.
 
     class Meta:
         managed = False
-        db_table = 'CrimeLocations'
-
-
-class Crimetypes(models.Model):
-    crimecode = models.CharField(db_column='crimeCode', primary_key=True, max_length=2)  # Field name made lowercase.
-    description = models.CharField(max_length=64, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'CrimeTypes'
+        db_table = 'LocationData'
 
 
 class AuthGroup(models.Model):
