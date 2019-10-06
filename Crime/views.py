@@ -1,5 +1,6 @@
 from django.shortcuts import render
 
+import json
 from rest_framework.schemas import AutoSchema
 import coreapi
 from .models import Crimeinstances
@@ -49,7 +50,7 @@ def generate_swagger_schema(description_dict):
         return AutoSchema(manual_fields=manual_fields)
 
 
-class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
+class CrimeViewSet(viewsets.ModelViewSet):
     
     serializer_class = CrimeSerializer
     
@@ -113,8 +114,17 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "description",
                           "crimetime"
                          ]
-    
 
+    def create(self, request, pk=None):
+        print("In create")
+        print(json.loads(request.data))
+        return Response(None)
+    def update(self, request, pk=None):
+        print("In update")
+        print(request)
+        print(dir(request))
+        return Response(None)
+            
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
