@@ -3,9 +3,9 @@ from django.shortcuts import render
 import json
 from rest_framework.schemas import AutoSchema
 import coreapi
-from .models import Crimeinstances, Crimetypes, Locationdata
+from .models import Inputdata, Crimeinstances, Crimetypes, Locationdata
 from rest_framework import viewsets
-from .serializers import CrimeSerializer, CrimetypesSerializer, WeaponSerializer, NeighborhoodSerializer, CountSerializer
+from .serializers import InputdataSerializer, CrimeSerializer, CrimetypesSerializer, WeaponSerializer, NeighborhoodSerializer, CountSerializer
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
@@ -50,9 +50,9 @@ def generate_swagger_schema(description_dict):
         return AutoSchema(manual_fields=manual_fields)
 
 
-class CrimeViewSet(viewsets.ModelViewSet):
+class InputdataViewSet(viewsets.ModelViewSet):
     
-    serializer_class = CrimeSerializer
+    serializer_class = InputdataSerializer
     
     valid_crime_params = ["page",
                           "format",
@@ -109,11 +109,12 @@ class CrimeViewSet(viewsets.ModelViewSet):
                        "month",
                        "day"
                       ]
-    all_details_params = ["weapon",
-                          "crimecode",
-                          "description",
-                          "crimetime"
-                         ]
+    main_params = ["weapon",
+                   "crimecode",
+                   "description",
+                   "crimetime",
+                   "crimedate"
+                  ]
 
     def create(self, request, pk=None):
         print("In create")
@@ -128,7 +129,7 @@ class CrimeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Crimeinstances.objects
+        queryset = Inputdata.objects
 
         param_keys = self.request.query_params.keys()
 
@@ -143,9 +144,9 @@ class CrimeViewSet(viewsets.ModelViewSet):
            ("format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
            ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
-            queryset = Crimeinstances.objects.all()
+            queryset = Inputdata.objects.all()
 
-        if any(element in self.all_details_params for element in param_keys):
+        if any(element in self.main_params for element in param_keys):
             queryset = self.parse_details(queryset)
             
         if any(element in self.all_location_params for element in param_keys):
@@ -370,7 +371,7 @@ class CrimeViewSet(viewsets.ModelViewSet):
 
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
-    queryset = Crimeinstances.objects.values("weapon").distinct()
+    queryset = Inputdata.objects.values("weapon").distinct()
 
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
@@ -397,7 +398,7 @@ class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
 class CountViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = CountSerializer
-    queryset = Crimeinstances.objects.all()
+    queryset = Inputdata.objects.all()
     
     valid_count_param_keys = ["crimedate",
                               "crimetime",

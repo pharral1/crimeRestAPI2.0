@@ -46,7 +46,7 @@ def test_post():
     requests.post(base_url, json=json.dumps(data))
 
 def test_all_crime_params():
-    base_url = "http://127.0.0.1:8000/crimeinstances/?"
+    base_url = "http://127.0.0.1:8000/inputdata/?"
 
     for param in valid_crime_params:
         
@@ -82,6 +82,6 @@ def test_all_count_params():
     
             
 if __name__ == "__main__":
-    #test_all_crime_params()
-    #test_all_count_params()
-    test_post()
+    test_all_crime_params()
+    test_all_count_params()
+    #test_post()

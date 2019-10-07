@@ -3,7 +3,8 @@ from rest_framework import routers
 from . import views
 
 router = routers.DefaultRouter()
-router.register(r'crimeinstances', views.CrimeViewSet, "crimeinstances")
+router.register(r'inputdata', views.InputdataViewSet, "inputdata")
+#router.register(r'crimeinstances', views.CrimeViewSet, "crimeinstances")
 router.register(r'crimetypes', views.CrimetypesViewSet, "crimetypes")
 router.register(r'weapons', views.WeaponViewSet, "weapons")
 router.register(r'neighborhoods', views.NeighborhoodViewSet, "neighborhoods")
