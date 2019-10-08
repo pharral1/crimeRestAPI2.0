@@ -1,5 +1,6 @@
 import requests
 import time
+import json
 valid_crime_params = ["page=2",
                       "inside_outside=inside",
                       "crimedate=2019-07-09",
@@ -38,8 +39,14 @@ valid_count_params = ["crimedate=2019-09-07",
                               "premise=STREET",
                              ]
 
+def test_post():
+    base_url = "http://127.0.0.1:8000/crimeinstances/"
+
+    data = {"inside_outside": ["inside", "outside"]}
+    requests.post(base_url, json=json.dumps(data))
+
 def test_all_crime_params():
-    base_url = "http://127.0.0.1:8000/crimeinstances/?"
+    base_url = "http://127.0.0.1:8000/inputdata/?"
 
     for param in valid_crime_params:
         
@@ -77,3 +84,4 @@ def test_all_count_params():
 if __name__ == "__main__":
     test_all_crime_params()
     test_all_count_params()
+    #test_post()
