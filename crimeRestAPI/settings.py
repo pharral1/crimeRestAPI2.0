@@ -84,7 +84,7 @@ REST_FRAMEWORK = {
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'baltimoreCrimeDataBAK',
+        'NAME': 'baltimoreCrimeData',
         'USER': 'APIUser',
         'PASSWORD': 'DjangoRestAPIUser1!',
         "HOST": "localhost"
