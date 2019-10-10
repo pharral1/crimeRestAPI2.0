@@ -87,7 +87,7 @@ DATABASES = {
         'NAME': 'baltimoreCrimeData',
         'USER': 'APIUser',
         'PASSWORD': 'DjangoRestAPIUser1!',
-        "HOST": "172.20.128.3",
+        "HOST": "172.17.0.1",
         "PORT": 3306,
     }
 }
