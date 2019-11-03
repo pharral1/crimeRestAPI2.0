@@ -1,12 +1,13 @@
 from rest_framework import serializers
 
-from .models import Inputdata, Crimeinstances, Crimetypes
+from .models import *
+
 
 class CrimeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Inputdata
+        model = Crimeinstances
         fields = ("__all__")
-
+"""
 class InputdataSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Inputdata
@@ -31,3 +32,4 @@ class CountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Inputdata
         fields = ("__all__")
+"""

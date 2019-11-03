@@ -3,12 +3,13 @@ from django.shortcuts import render
 import json
 from rest_framework.schemas import AutoSchema
 import coreapi
-from .models import Inputdata, Crimeinstances, Crimetypes, Locationdata
+from .models import *
 from rest_framework import viewsets
-from .serializers import InputdataSerializer, CrimeSerializer, CrimetypesSerializer, WeaponSerializer, NeighborhoodSerializer, CountSerializer
+from .serializers import *
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
+
 
 crime_params_description = {"inside_outside": 'Location, either "inside" or "outside" of a building.',
                             "crimedate": 'Date the crime was committed, must be in YYYY-MM-DD format.',
@@ -50,9 +51,9 @@ def generate_swagger_schema(description_dict):
         return AutoSchema(manual_fields=manual_fields)
 
 
-class InputdataViewSet(viewsets.ReadOnlyModelViewSet):
+class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     
-    serializer_class = InputdataSerializer
+    serializer_class = CrimeSerializer
     
     valid_crime_params = ["page",
                           "format",
@@ -119,7 +120,7 @@ class InputdataViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Inputdata.objects
+        queryset = Crimeinstances.objects
 
         param_keys = self.request.query_params.keys()
 
@@ -134,7 +135,7 @@ class InputdataViewSet(viewsets.ReadOnlyModelViewSet):
            ("format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
            ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
-            queryset = Inputdata.objects.all()
+            queryset = Crimeinstances.objects.all()
 
                         
         if any(element in self.all_location_params for element in param_keys):
@@ -246,7 +247,7 @@ class InputdataViewSet(viewsets.ReadOnlyModelViewSet):
                 raise ParseError("Bad parameters, date_range must provide date values")
 
         return queryset
-
+"""
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
     queryset = Inputdata.objects.values("weapon").distinct()
@@ -328,3 +329,4 @@ class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CrimetypesSerializer
     queryset = Crimetypes.objects.all()
 
+"""
