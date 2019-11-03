@@ -323,10 +323,13 @@ class CountViewSet(viewsets.ReadOnlyModelViewSet):
         
 
         return Response(count)
-
+"""
 class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
 
-    serializer_class = CrimetypesSerializer
-    queryset = Crimetypes.objects.all()
+        serializer_class = CrimetypesSerializer
+        queryset = Crimetypes.objects.all()
 
-"""
+
+class LocationdataViewSet(viewsets.ReadOnlyModelViewSet):
+        serializer_class = LocationdataSerializer
+        queryset = Locationdata.objects.all()

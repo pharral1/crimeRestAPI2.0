@@ -4,10 +4,11 @@ from . import views
 
 router = routers.DefaultRouter()
 
-router.register(r'crime', views.CrimeViewSet, "crime")
-"""
-#router.register(r'crimeinstances', views.CrimeViewSet, "crimeinstances")
+router.register(r'crimeinstances', views.CrimeViewSet, "crimeinstances")
 router.register(r'crimetypes', views.CrimetypesViewSet, "crimetypes")
+router.register(r'locationdata', views.LocationdataViewSet, "locationdata")
+
+"""
 router.register(r'weapons', views.WeaponViewSet, "weapons")
 router.register(r'neighborhoods', views.NeighborhoodViewSet, "neighborhoods")
 router.register(r'count', views.CountViewSet, "count")
