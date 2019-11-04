@@ -120,7 +120,9 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Crimeinstances.objects
+        queryset = Crimeinstances.objects.all()
+        print("Here")
+        print(queryset)
 
         param_keys = self.request.query_params.keys()
 
@@ -136,7 +138,8 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
            ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
             queryset = Crimeinstances.objects.all()
-
+        print("Here2")
+        print(queryset)
                         
         if any(element in self.all_location_params for element in param_keys):
            queryset =  self.parse_location(queryset)
@@ -164,21 +167,26 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     
     def parse_location(self, queryset):
         print("Found location parameter")
+        print(queryset)
 
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
         if inside_outside is not None and (inside_outside != "Inside" and inside_outside != "Outside"):
             raise ParseError("Bad parameters, inside_outside must be 'Inside' or 'Outside'")
-        else:
+        elif inside_outside is not None:
             queryset = queryset.filter(locationid__inside_outside=inside_outside)
 
 
+            
         #USE THIS TO ACCESS FOREIGN TABLE RELATIONSHIPS
         post = self.request.query_params.get('post', None)
         if post is not None:
             print("Post found")
+            print(queryset)
             queryset = queryset.filter(locationid__post=post)
+            print(queryset)
+            
 
         lat = self.request.query_params.get('latitude', None)
         if lat is not None:
