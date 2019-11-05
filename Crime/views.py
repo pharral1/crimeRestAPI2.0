@@ -1,6 +1,5 @@
+#django imports
 from django.shortcuts import render
-
-import json
 from rest_framework.schemas import AutoSchema
 import coreapi
 from .models import *
@@ -10,25 +9,29 @@ from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
 
+#python imports
+import json
+import time
+from datetime import datetime
 
 crime_params_description = {"inside_outside": 'Location, either "inside" or "outside" of a building.',
                             "crimedate": 'Date the crime was committed, must be in YYYY-MM-DD format.',
-                            "crimedate__range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
-                            "crimedate__lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
-                            "crimedate__gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
-                            "crimedate__year": "A year in YYYY integer format.",
-                            "crimedate__month": "A month in MM integer format.",
-                            "crimedate__day": "A day in DD integer format.",
+                            "crimedate_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
+                            "crimedate_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
+                            "crimedate_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
+                            "crimedate_year": "A year in YYYY integer format.",
+                            "crimedate_month": "A month in MM integer format.",
+                            "crimedate_day": "A day in DD integer format.",
                             "weapon": "A weapon, must be one of the enumerated types.",
                             "location": "A street address, do not include anything after the street.",
                             "latitude": "Latitude, in float format.",
-                            "latitude__lte": "Latitude, in float format. Will return all latitudes less or equal to the specified value.",
-                            "latitude__gte": "Latitude, in float format. Will return all latitudes greater or equal to the specified value.",
-                            "latitude__range": "A range of latitudes in float,float format.",
+                            "latitude_lte": "Latitude, in float format. Will return all latitudes less or equal to the specified value.",
+                            "latitude_gte": "Latitude, in float format. Will return all latitudes greater or equal to the specified value.",
+                            "latitude_range": "A range of latitudes in float,float format.",
                             "longitude": "Longitude, in float format.",
-                            "longitude__lte": "Longitude, in float format. Will return all longitudes less or equal to the specified value.",
-                            "longitude__gte": "Longitude, in float format. Will return all longitudes greater or equal to the specified value.",
-                            "longitude__range": "A range of longitudes in float,float format.",
+                            "longitude_lte": "Longitude, in float format. Will return all longitudes less or equal to the specified value.",
+                            "longitude_gte": "Longitude, in float format. Will return all longitudes greater or equal to the specified value.",
+                            "longitude_range": "A range of longitudes in float,float format.",
                             "post": "A Police post number, must be an integer",
                             "district": "A Police district string.",
                             "neighborhood": "The neighborhood where the crime took place.",
@@ -36,6 +39,9 @@ crime_params_description = {"inside_outside": 'Location, either "inside" or "out
                             "crimecode": "The code used to describe the crime.",
                             "description": "The description of the crime.",
                             "crimetime": "The time at which the crime occurred in HH:MM:SS format.",
+                            "crimetime_range": "A range of times in HH:MM:SS,HH:MM:SS format.",
+                            "crimetime_lte": "A time that will be the upper range for a lte operation in HH:MM:SS foramt.",
+                            "crimetime_gte": "A time that will be the lower range for a gte operation in HH:MM:SS foramt.",
                            }
 
 #generates the AutoSchema used by swagger from a {parameter: description} dictionary (see above)
@@ -59,21 +65,21 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "format",
                           "inside_outside",
                           "crimedate",
-                          "crimedate__range",
-                          "crimedate__lte",
-                          "crimedate__gte",
-                          "crimedate__year",
-                          "crimedate__month",
-                          "crimedate__day",
+                          "crimedate_range",
+                          "crimedate_lte",
+                          "crimedate_gte",
+                          "crimedate_year",
+                          "crimedate_month",
+                          "crimedate_day",
                           "location",
                           "latitude",
-                          "latitude__lte",
-                          "latitude__gte",
-                          "latitude__range",
+                          "latitude_lte",
+                          "latitude_gte",
+                          "latitude_range",
                           "longitude",
-                          "longitude__lte",
-                          "longitude__gte",
-                          "longitude__range",
+                          "longitude_lte",
+                          "longitude_gte",
+                          "longitude_range",
                           "neighborhood",
                           "post",
                           "premise",
@@ -82,6 +88,9 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "crimecode",
                           "description",
                           "crimetime",
+                          "crimetime_range",
+                          "crimetime_lte",
+                          "crimetime_gte",
                           ]
 
     schema = generate_swagger_schema(crime_params_description)
@@ -89,13 +98,13 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     all_location_params = ["inside_outside",
                            "location",
                            "latitude",
-                           "latitude__lte",
-                           "latitude__gte",
-                           "latitude__range",
+                           "latitude_lte",
+                           "latitude_gte",
+                           "latitude_range",
                            "longitude",
-                           "longitude__lte",
-                           "longitude__gte",
-                           "longitude__range",
+                           "longitude_lte",
+                           "longitude_gte",
+                           "longitude_range",
                            "neighborhood",
                            "post",
                            "district",
@@ -103,18 +112,20 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           ]
     
     all_date_params = ["crimedate",
-                       "crimedate__range",
-                       "crimedate__lte",
-                       "crimedate__gte",
-                       "crimedate__year",
-                       "crimedate__month",
-                       "crimedate__day"
+                       "crimedate_range",
+                       "crimedate_lte",
+                       "crimedate_gte",
+                       "crimedate_year",
+                       "crimedate_month",
+                       "crimedate_day",
+                       "crimetime",
+                       "crimetime_range",
+                       "crimetime_lte",
+                       "crimetime_gte",
                       ]
     main_params = ["weapon",
                    "crimecode",
                    "description",
-                   "crimetime",
-                   "crimedate"
                   ]
 
     def get_queryset(self):
@@ -132,7 +143,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
            queryset =  self.parse_location(queryset)
 
         if any(element in self.all_date_params for element in param_keys):    
-            queryset = self.parse_date(queryset)
+            queryset = self.parse_datetime(queryset)
 
         #parse the base params using dict based parameter passing
         for key in param_keys:
@@ -192,37 +203,37 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(locationid__latitude=latitude)
         
         #latitude range parsing, split two latitudes on a range
-        latitude_range = self.request.query_params.get("latitude__range", None)
+        latitude_range = self.request.query_params.get("latitude_range", None)
         if latitude_range is not None:
             latitude_range = latitude_range.split(",")
                         
             if "" in latitude_range:
-                raise ParseError("Bad parameters, latitude__range must provide two floats")
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
             if len(latitude_range) != 2:
-                raise ParseError("Bad parameters, latitude__range must provide two floats")
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
 
             try:
                 for i in latitude_range:
                     float(i)
             except:
-                raise ParseError("Bad parameters, latitude__range must provide two floats")
+                raise ParseError("Bad parameters, latitude_range must provide two floats")
             queryset = queryset.filter(locationid__latitude__range=latitude_range)
                 
         #latitude greater than and less than parsing
-        latitude_lte = self.request.query_params.get("latitude__lte", None)
+        latitude_lte = self.request.query_params.get("latitude_lte", None)
         if latitude_lte is not None:
             try:
                 float(latitude_lte)
             except:
-                raise ParseError("Bad parameters, latitude must provide a float")
+                raise ParseError("Bad parameters, latitude_lte must provide a float")
             queryset = queryset.filter(locationid__latitude__lte=latitude_lte)
         
-        latitude_gte = self.request.query_params.get("latitude__gte", None)
+        latitude_gte = self.request.query_params.get("latitude_gte", None)
         if latitude_gte is not None:
             try:
                 float(latitude_gte)
             except:
-                raise ParseError("Bad parameters, latitude must provide a float")
+                raise ParseError("Bad parameters, latitude_gte must provide a float")
             queryset = queryset.filter(locationid__latitude__gte=latitude_gte)
 
         #longitude parsing
@@ -236,7 +247,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(locationid__longitude=longitude)
             
         #longitude range parsing, split two longitudes on a range
-        longitude_range = self.request.query_params.get("longitude__range", None)
+        longitude_range = self.request.query_params.get("longitude_range", None)
         if longitude_range is not None:
             longitude_range = longitude_range.split(",")
                         
@@ -253,47 +264,90 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(locationid__longitude__range=longitude_range)
             
         #longitude greater than and less than parsing
-        longitude_lte = self.request.query_params.get("longitude__lte", None)
+        longitude_lte = self.request.query_params.get("longitude_lte", None)
         if longitude_lte is not None:
             try:
                 float(longitude_lte)
             except:
-                raise ParseError("Bad parameters, longitude must provide a float")
+                raise ParseError("Bad parameters, longitude_lte must provide a float")
             queryset = queryset.filter(locationid__longitude__lte=longitude_lte)
             
-        longitude_gte = self.request.query_params.get("longitude__gte", None)
+        longitude_gte = self.request.query_params.get("longitude_gte", None)
         if longitude_gte is not None:
             try:
                 float(longitude_gte)
             except:
-                raise ParseError("Bad parameters, longitude__gte must provide a float")
+                raise ParseError("Bad parameters, longitude_gte must provide a float")
             queryset = queryset.filter(locationid__longitude__gte=longitude_gte)
             
         return queryset
     
-    def parse_date(self, queryset):
+    def parse_datetime(self, queryset):
  
         #date range parsing, splits two dates on a comma delimiter
-        date_range = self.request.query_params.get("crimedate__range", None)
+        date_range = self.request.query_params.get("crimedate_range", None)
         if date_range is not None:
             date_range = date_range.split(",")
             if len(date_range) != 2:
-                raise ParseError("Bad parameters, date_range must provide date values")
+                raise ParseError("Bad parameters, crimedate_range must provide date values")
+            self.validate_date(date_range[0])
+            self.validate_date(date_range[1])
             queryset = queryset.filter(crimedate__range=date_range)
 
         crimedate = self.request.query_params.get("crimedate", None)
         if crimedate is not None:
+            self.validate_date(crimedate)
             queryset = queryset.filter(crimedate=crimedate)
 
-        date_lte = self.request.query_params.get("crimedate__lte", None)
+        date_lte = self.request.query_params.get("crimedate_lte", None)
         if date_lte is not None:
+            self.validate_date(date_lte)
             queryset = queryset.filter(crimedate__lte=date_lte)
             
-        date_gte = self.request.query_params.get("crimedate__gte", None)
+        date_gte = self.request.query_params.get("crimedate_gte", None)
         if date_gte is not None:
+            self.validate_date(date_gte)
             queryset = queryset.filter(crimedate__gte=date_gte)
+
+        crimetime = self.request.query_params.get("crimetime", None)
+        if crimetime is not None:
+            self.validate_time(crimetime)
+            queryset = queryset.filter(crimetime=crimetime)
         
+        crimetime_range = self.request.query_params.get("crimetime_range", None)
+        if crimetime_range is not None:
+            crimetime_range = crimetime_range.split(",")
+            if len(crimetime_range) != 2:
+                raise ParseError("Bad parameters, crimetime_range must provide two date values")
+            self.validate_time(crimetime_range[0])
+            self.validate_time(crimetime_range[1])
+            queryset = queryset.filter(crimetime__range=crimetime_range)
+
+        crimetime_lte = self.request.query_params.get("crimetime_lte", None)
+        if crimetime_lte is not None:
+            self.validate_time(crimetime_lte)
+            queryset = queryset.filter(crimetime__lte=crimetime_lte)
+
+        crimetime_gte = self.request.query_params.get("crimetime_gte", None)
+        if crimetime_gte is not None:
+            self.validate_time(crimetime_gte)
+            queryset = queryset.filter(crimetime__gte=crimetime_gte)
+            
         return queryset
+
+    def validate_date(self, date_val):
+        try:
+            form = datetime.strptime(date_val, "%Y-%m-%d")
+        except:
+            raise ParseError("Invalid date value, must be in YYYY-MM-DD format")
+            
+    def validate_time(self, time_val):
+        try:
+            form = time.strptime(time_val, "%H:%M:%S")
+        except:
+            raise ParseError("Invalid time format, time must be in HH:MM:SS format")
+
+        
 """
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
