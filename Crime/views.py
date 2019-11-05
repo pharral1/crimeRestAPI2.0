@@ -121,32 +121,18 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
         queryset = Crimeinstances.objects.all()
-        print("Here")
-        print(queryset)
-
+       
         param_keys = self.request.query_params.keys()
 
         for key in param_keys:
             if key not in self.valid_crime_params:
                 raise ParseError("Bad parameter: %s" % key)
-
-        #if there are no query params and/or there are no query parameters
-        #plus a page number or format type, get all, and allow for pagination or formatting still
-        if not self.request.query_params.keys() or \
-           ("page" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
-           ("format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
-           ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
-            queryset = Crimeinstances.objects.all()
-        print("Here2")
-        print(queryset)
-                        
         if any(element in self.all_location_params for element in param_keys):
            queryset =  self.parse_location(queryset)
 
         if any(element in self.all_date_params for element in param_keys):    
             queryset = self.parse_date(queryset)
-
 
         #parse the base params using dict based parameter passing
         for key in param_keys:
@@ -166,36 +152,44 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
     
     def parse_location(self, queryset):
-        print("Found location parameter")
-        print(queryset)
+        print(dict(self.request.query_params))
+        district = self.request.query_params.get("district", None)
+        if district is not None:
+            queryset = queryset.filter(locationid__district=district)
+
+        neighborhood = self.request.query_params.get("neighborhood", None)
+        if neighborhood is not None:
+            queryset = queryset.filter(locationid__neighborhood=neighborhood)
+
+        location = self.request.query_params.get("location", None)
+        if location is not None:
+            queryset = queryset.filter(locationid__location=location)
+                
+        premise = self.request.query_params.get("premise", None)
+        if premise is not None:
+            queryset = queryset.filter(locationid__premise=premise)
 
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
-        if inside_outside is not None and (inside_outside != "Inside" and inside_outside != "Outside"):
+        if inside_outside is not None and inside_outside not in ["Inside", "Outside"]:
             raise ParseError("Bad parameters, inside_outside must be 'Inside' or 'Outside'")
         elif inside_outside is not None:
             queryset = queryset.filter(locationid__inside_outside=inside_outside)
-
-
             
         #USE THIS TO ACCESS FOREIGN TABLE RELATIONSHIPS
         post = self.request.query_params.get('post', None)
         if post is not None:
-            print("Post found")
-            print(queryset)
             queryset = queryset.filter(locationid__post=post)
-            print(queryset)
-            
 
-        lat = self.request.query_params.get('latitude', None)
-        if lat is not None:
-            print("Lat found")
-            lat = float(lat)
-            queryset = queryset.filter(locationid__latitude=lat)
-
+        latitude = self.request.query_params.get('latitude', None)
+        if latitude is not None:
+            try:
+                latitude = float(latitude)
+            except:
+                raise ParseError("Bad parameters, latitude must be a float")
         
-
+            queryset = queryset.filter(locationid__latitude=latitude)
         
         #latitude range parsing, split two latitudes on a range
         latitude_range = self.request.query_params.get("latitude__range", None)
@@ -230,6 +224,16 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             except:
                 raise ParseError("Bad parameters, latitude must provide a float")
             queryset = queryset.filter(locationid__latitude__gte=latitude_gte)
+
+        #longitude parsing
+        longitude = self.request.query_params.get('longitude', None)
+        if longitude is not None:
+            try:
+                longitude = float(longitude)
+            except:
+                raise ParseError("Bad parameters, latitude must be a float")
+        
+            queryset = queryset.filter(locationid__longitude=longitude)
             
         #longitude range parsing, split two longitudes on a range
         longitude_range = self.request.query_params.get("longitude__range", None)
