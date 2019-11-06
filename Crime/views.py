@@ -8,6 +8,7 @@ from .serializers import *
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
+from django.db.models import Q
 
 #python imports
 import json
@@ -145,40 +146,80 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         if any(element in self.all_date_params for element in param_keys):    
             queryset = self.parse_datetime(queryset)
 
-        #parse the base params using dict based parameter passing
-        for key in param_keys:
-            if key in self.main_params:
-                    value = self.request.query_params.get(key, None)
-                    if "range" in key:
-                            value = value.split(",")
-                    key_val = {key: value}
-                    queryset = queryset.filter(**key_val)
+        if any(element in self.main_params for element in param_keys):
+            queryset = self.parse_details(queryset)
                       
         #if query set has not been modified by here, then no filtering has been done,
         #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
         if isinstance(queryset, Manager):
             raise ParseError("Bad parameters")
 
-        queryset.order_by("id")
+        queryset = queryset.order_by("crimeid")
+        return queryset
+
+    def parse_details(self, queryset):
+
+        #weapon parsing
+        #split input on comma to find combined fields
+        weapon = self.request.query_params.get("weapon", None)
+        if weapon is not None:
+            if "," in weapon:
+                weapon = weapon.split(",")
+                queryset = queryset.filter(weapon__in=weapon)
+            else:
+                queryset = queryset.filter(weapon=weapon)
+
+        crimecode = self.request.query_params.get("crimecode", None)
+        if crimecode is not None:
+            if "," in crimecode:
+                crimecode = crimecode.split(",")
+                queryset = queryset.filter(crimecode__in=crimecode)
+            else:
+                queryset = queryset.filter(crimecode=crimecode)
+
+        description = self.request.query_params.get("description", None)
+        if description is not None:
+            if "," in description:
+                description = description.split(",")
+                queryset = queryset.filter(crimecode__description__in=description)
+            else:
+                queryset = queryset.filter(crimecode__description=description)
+
         return queryset
     
     def parse_location(self, queryset):
-        print(dict(self.request.query_params))
+        
         district = self.request.query_params.get("district", None)
         if district is not None:
-            queryset = queryset.filter(locationid__district=district)
+            if "," in district:
+                district = district.split(",")
+                queryset = queryset.filter(locationid__district__in=district)
+            else:
+                queryset = queryset.filter(locationid__district=district)
 
         neighborhood = self.request.query_params.get("neighborhood", None)
         if neighborhood is not None:
-            queryset = queryset.filter(locationid__neighborhood=neighborhood)
+            if "," in neighborhood:
+                neighborhood = neighborhood.split(",")
+                queryset = queryset.filter(locationid__neighborhood__in=neighborhood)
+            else:
+                queryset = queryset.filter(locationid__neighborhood=neighborhood)
 
         location = self.request.query_params.get("location", None)
         if location is not None:
-            queryset = queryset.filter(locationid__location=location)
+            if "," in location:
+                location = location.split(",")
+                queryset = queryset.filter(locationid__location__in=location)
+            else:
+                queryset = queryset.filter(locationid__location=location)
                 
         premise = self.request.query_params.get("premise", None)
         if premise is not None:
-            queryset = queryset.filter(locationid__premise=premise)
+            if "," in premise:
+                premise = premise.split(",")
+                queryset = queryset.filter(locationid__premise__in=premise)
+            else:
+                queryset = queryset.filter(locationid__premise=premise)
 
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
@@ -188,11 +229,16 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         elif inside_outside is not None:
             queryset = queryset.filter(locationid__inside_outside=inside_outside)
             
-        #USE THIS TO ACCESS FOREIGN TABLE RELATIONSHIPS
+        #post number parsing
         post = self.request.query_params.get('post', None)
         if post is not None:
-            queryset = queryset.filter(locationid__post=post)
+            if "," in post:
+                post = post.split(",")
+                queryset = queryset.filter(locationid__post__in=post)
+            else:
+                queryset = queryset.filter(locationid__post=post)
 
+        #latitude parsing
         latitude = self.request.query_params.get('latitude', None)
         if latitude is not None:
             try:
@@ -297,32 +343,65 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         #date value pasrsing
         crimedate = self.request.query_params.get("crimedate", None)
         if crimedate is not None:
-            self.validate_date(crimedate)
-            queryset = queryset.filter(crimedate=crimedate)
+            if "," in crimedate:
+                crimedate = crimedate.split(",")
+                for date in crimedate:
+                    self.validate_date(date)
+                queryset = queryset.filter(crimedate__in=crimedate)
+            else:
+                self.validate_date(crimedate)
+                queryset = queryset.filter(crimedate=crimedate)
 
         crimedate_year = self.request.query_params.get("crimedate_year", None)
         if crimedate_year is not None:
-            try:
-                int(crimedate_year)
-            except:
-                raise ParseError("Year must be an integer")
-            queryset = queryset.filter(crimedate__year=crimedate_year)
+            if "," in crimedate_year:
+                crimedate_year = crimedate_year.split(",")
+                for year in crimedate_year:
+                    try:
+                        int(year)
+                    except:
+                        raise ParseError("Year must be an integer")
+                queryset = queryset.filter(crimedate__year__in=crimedate_year)
+            else:
+                try:
+                    int(crimedate_year)
+                except:
+                    raise ParseError("Year must be an integer")
+                queryset = queryset.filter(crimedate__year=crimedate_year)
 
         crimedate_month = self.request.query_params.get("crimedate_month", None)
         if crimedate_month is not None:
-            try:
-                int(crimedate_month)
-            except:
-                raise ParseError("Month must be an integer")
-            queryset = queryset.filter(crimedate__month=crimedate_month)
+            if "," in crimedate_month:
+                crimedate_month = crimedate_month.split(",")
+                for month in crimedate_month:
+                    try:
+                        int(month)
+                    except:
+                        raise ParseError("Month must be an integer")
+                queryset = queryset.filter(crimedate__month__in=crimedate_month)
+            else:
+                try:
+                    int(crimedate_month)
+                except:
+                    raise ParseError("Month must be an integer")
+                queryset = queryset.filter(crimedate__month=crimedate_month)
 
         crimedate_day = self.request.query_params.get("crimedate_day", None)
         if crimedate_day is not None:
-            try:
-                int(crimedate_day)
-            except:
-                raise ParseError("Day must be an integer")
-            queryset = queryset.filter(crimedate__day=crimedate_day)
+            if "," in crimedate_day:
+                crimedate_day = crimedate_day.split(",")
+                for day in crimedate_day:
+                    try:
+                        int(day)
+                    except:
+                        raise ParseError("Day must be an integer")
+                queryset = queryset.filter(crimedate__day__in=crimedate_day)
+            else:
+                try:
+                    int(crimedate_day)
+                except:
+                    raise ParseError("Day must be an integer")
+                queryset = queryset.filter(crimedate__day=crimedate_day)
 
         #date range parsing
         date_lte = self.request.query_params.get("crimedate_lte", None)
@@ -337,8 +416,14 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
 
         crimetime = self.request.query_params.get("crimetime", None)
         if crimetime is not None:
-            self.validate_time(crimetime)
-            queryset = queryset.filter(crimetime=crimetime)
+            if "," in crimetime:
+                crimetime = crimetime.split(",")
+                for t in crimetime:
+                    self.validate_time(t)
+                queryset = queryset.filter(crimetime__in=crimetime)
+            else:
+                self.validate_time(crimetime)
+                queryset = queryset.filter(crimetime=crimetime)
         
         crimetime_range = self.request.query_params.get("crimetime_range", None)
         if crimetime_range is not None:
