@@ -294,11 +294,37 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             self.validate_date(date_range[1])
             queryset = queryset.filter(crimedate__range=date_range)
 
+        #date value pasrsing
         crimedate = self.request.query_params.get("crimedate", None)
         if crimedate is not None:
             self.validate_date(crimedate)
             queryset = queryset.filter(crimedate=crimedate)
 
+        crimedate_year = self.request.query_params.get("crimedate_year", None)
+        if crimedate_year is not None:
+            try:
+                int(crimedate_year)
+            except:
+                raise ParseError("Year must be an integer")
+            queryset = queryset.filter(crimedate__year=crimedate_year)
+
+        crimedate_month = self.request.query_params.get("crimedate_month", None)
+        if crimedate_month is not None:
+            try:
+                int(crimedate_month)
+            except:
+                raise ParseError("Month must be an integer")
+            queryset = queryset.filter(crimedate__month=crimedate_month)
+
+        crimedate_day = self.request.query_params.get("crimedate_day", None)
+        if crimedate_day is not None:
+            try:
+                int(crimedate_day)
+            except:
+                raise ParseError("Day must be an integer")
+            queryset = queryset.filter(crimedate__day=crimedate_day)
+
+        #date range parsing
         date_lte = self.request.query_params.get("crimedate_lte", None)
         if date_lte is not None:
             self.validate_date(date_lte)
