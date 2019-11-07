@@ -20,12 +20,12 @@ class LocationdataSerializer(serializers.HyperlinkedModelSerializer):
         fields = ("__all__")
 
 
-"""
+
 class WeaponSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Inputdata
+        model = Crimeinstances
         fields = ("weapon",)
-
+"""
 class NeighborhoodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Inputdata

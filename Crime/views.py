@@ -459,10 +459,9 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
             raise ParseError("Invalid time format, time must be in HH:MM:SS format")
 
         
-"""
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
-    queryset = Inputdata.objects.values("weapon").distinct()
+    queryset = Crimeinstances.objects.values("weapon").distinct()
 
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
@@ -473,7 +472,8 @@ class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
         #currently need to cast weapon as char through extra() call as weapon is stored as an ENUM and sort works on an enum index basis in SQL
         return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
 
-    
+
+"""    
 class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NeighborhoodSerializer
     queryset = Locationdata.objects.order_by().values("neighborhood").distinct()
