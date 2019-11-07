@@ -9,9 +9,8 @@ router.register(r'crimetypes', views.CrimetypesViewSet, "crimetypes")
 router.register(r'locationdata', views.LocationdataViewSet, "locationdata")
 router.register(r'weapons', views.WeaponViewSet, "weapons")
 router.register(r'neighborhoods', views.NeighborhoodViewSet, "neighborhoods")
-"""
 router.register(r'count', views.CountViewSet, "count")
-"""
+
 
 urlpatterns = [
     path('', include(router.urls)),

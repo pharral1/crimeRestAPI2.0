@@ -486,57 +486,17 @@ class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
         #return a flat list of distinct values without the empty string
         return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood="").exclude(neighborhood=None))
 
-"""
-class CountViewSet(viewsets.ReadOnlyModelViewSet):
 
-    serializer_class = CountSerializer
-    queryset = Inputdata.objects.all()
-    
-    valid_count_param_keys = ["crimedate",
-                              "crimetime",
-                              "crimecode",
-                              "location",
-                              "description",
-                              "inside_outside",
-                              "weapon",
-                              "post",
-                              "district",
-                              "neighborhood",
-                              "longitude",
-                              "latitude",
-                              "location1",
-                              "premise",
-                             ]
-    def list(self, request, *args, **kwargs):
-        search_key = self.request.query_params.keys()
+class CountViewSet(CrimeViewSet):
 
-        if len(search_key) > 1:
-            raise ParseError("Bad parameters, can only count one at a time")
-        elif len(search_key) == 0:
-            raise ParseError("Must provide a parameter with a key equal to a column in the crime db and a value equal to a value in that column.")
+        serializer_class = CountSerializer
 
-        search_key = list(self.request.query_params.keys())[0]
-        print(search_key)
-        if search_key not in self.valid_count_param_keys:
-            raise ParseError("Bad parameters, must specify column in database")
+        def list(self, request, *args, **kwargs):
+            queryset = super().get_queryset()
+            count = queryset.count()
+            return Response(count)
+            
 
-        
-        
- 
-        search_value = self.request.query_params[search_key]
-        if search_key == "inside_outside":
-            if search_value == "inside":
-                search_value = "I"
-            elif search_value == "outside":
-                search_value = "O"
-        
-        search_filter = {search_key: search_value}
-        print(search_filter)
-        count = self.queryset.filter(**search_filter).count()
-        
-
-        return Response(count)
-"""
 class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer_class = CrimetypesSerializer
