@@ -473,7 +473,7 @@ class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
 
 
-"""    
+    
 class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NeighborhoodSerializer
     queryset = Locationdata.objects.order_by().values("neighborhood").distinct()
@@ -484,8 +484,9 @@ class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
         #query set = self.filter_queryset(self.get_queryset())
 
         #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood=""))
+        return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood="").exclude(neighborhood=None))
 
+"""
 class CountViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = CountSerializer
