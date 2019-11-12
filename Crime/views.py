@@ -458,7 +458,18 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         except:
             raise ParseError("Invalid time format, time must be in HH:MM:SS format")
 
-        
+class DescriptionViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = DescriptionSerializer
+    queryset = Crimetypes.objects.order_by().values("description").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('description', flat=True).order_by("description").exclude(description="").exclude(description=None))
+
 class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WeaponSerializer
     queryset = Crimeinstances.objects.values("weapon").distinct()
@@ -485,6 +496,70 @@ class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
 
         #return a flat list of distinct values without the empty string
         return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood="").exclude(neighborhood=None))
+
+
+class PostViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PostSerializer
+    queryset = Locationdata.objects.order_by().values("post").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('post', flat=True).order_by("post").exclude(post="").exclude(post=None))
+
+class DistrictViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = DistrictSerializer
+    queryset = Locationdata.objects.order_by().values("district").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('district', flat=True).order_by("district").exclude(district="").exclude(district=None))
+
+
+class LocationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LocationSerializer
+    queryset = Locationdata.objects.order_by().values("location").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('location', flat=True).order_by("location").exclude(location="").exclude(location=None))
+
+class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PremiseSerializer
+    queryset = Locationdata.objects.order_by().values("premise").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('premise', flat=True).order_by("premise").exclude(premise="").exclude(premise=None))
+"""
+class ViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = Serializer
+    queryset = Locationdata.objects.order_by().values("").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('', flat=True).order_by("").exclude(="").exclude(=None))
+
+"""
 
 
 class CountViewSet(CrimeViewSet):

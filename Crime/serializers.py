@@ -19,6 +19,12 @@ class LocationdataSerializer(serializers.HyperlinkedModelSerializer):
         model = Locationdata
         fields = ("__all__")
 
+#value list serializers
+class DescriptionSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Crimetypes
+        fields = ("description")
+
 class WeaponSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
@@ -28,6 +34,26 @@ class NeighborhoodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Locationdata
         fields = ("neighborhood",)
+
+class PostSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("post",)
+
+class DistrictSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("district",)
+
+class LocationSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("location",)
+
+class PremiseSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("premise",)
 
 class CountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
