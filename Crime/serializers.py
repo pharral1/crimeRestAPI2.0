@@ -64,3 +64,9 @@ class WeaponCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("weapon",)
+
+class DateCountSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("crimedate",)
+        

@@ -15,6 +15,7 @@ router.register(r'district', views.DistrictViewSet, "district")
 router.register(r'location', views.LocationViewSet, "location")
 router.register(r'premise', views.PremiseViewSet, "premise")
 router.register(r'weapon-count', views.WeaponCountViewSet, "weapon-count")
+router.register(r'date-count', views.DateCountViewSet, "date-count")
 
 """
 router.register(r'', views.ViewSet, "")

@@ -603,7 +603,39 @@ class WeaponCountViewSet(CrimeViewSet):
                 for val in queryset:
                     flatten[val["weapon"]] = val["total"]
                 return Response(flatten)
-        
-                        
 
+class DateCountViewSet(CrimeViewSet):
+        serializer_class = WeaponCountSerializer
         
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            
+            
+            if len(param_keys) == 0:
+                queryset = Crimeinstances.objects.all().values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)
+            else:
+                queryset = super().get_queryset()
+                queryset = queryset.values("weapon").values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)        
