@@ -582,19 +582,8 @@ class LocationdataViewSet(viewsets.ReadOnlyModelViewSet):
         serializer_class = LocationdataSerializer
         queryset = Locationdata.objects.all()
 
-class WeaponCountViewSet(viewsets.ReadOnlyModelViewSet):
+class WeaponCountViewSet(CrimeViewSet):
         serializer_class = WeaponCountSerializer
-        all_date_params = {
-                            "crimedate": 'Date the crime was committed, must be in YYYY-MM-DD format.',
-                            "crimedate_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
-                            "crimedate_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
-                            "crimedate_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
-                            "crimedate_year": "A year in YYYY integer format.",
-                            "crimedate_month": "A month in MM integer format.",
-                            "crimedate_day": "A day in DD integer format."
-                          }
-
-        schema =  generate_swagger_schema(all_date_params)
         
         def list(self, request, *args, **kwargs):
             param_keys = self.request.query_params.keys()
@@ -608,6 +597,13 @@ class WeaponCountViewSet(viewsets.ReadOnlyModelViewSet):
                 return Response(flatten)
 
             else:
-                #stub
-                pass
+                queryset = super().get_queryset()
+                queryset = queryset.values("weapon").annotate(total=Count("weapon")).order_by("total")
+                flatten = {}
+                for val in queryset:
+                    flatten[val["weapon"]] = val["total"]
+                return Response(flatten)
+        
                         
+
+        
