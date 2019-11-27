@@ -37,7 +37,7 @@ class Locationdata(models.Model):
     post = models.CharField(max_length=8, blank=True, null=True)
     district = models.CharField(max_length=64, blank=True, null=True)
     neighborhood = models.CharField(max_length=64, blank=True, null=True)
-    longitude = models.DecimalField(max_digits=12, decimal_places=10, blank=True, null=True)
+    longitude = modesl.DecimalField(max_digits=12, decimal_places=10, blank=True, null=True)
     latitude = models.DecimalField(max_digits=12, decimal_places=10, blank=True, null=True)
     location1 = models.CharField(max_length=48, blank=True, null=True)
     premise = models.CharField(max_length=48, blank=True, null=True)
