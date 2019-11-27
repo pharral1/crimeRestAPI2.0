@@ -134,9 +134,14 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
         queryset = Crimeinstances.objects.all()
-       
-        param_keys = self.request.query_params.keys()
 
+        #need to extract the column value from the param keys if the request has been routed here from the column-count class
+        pre_keys = self.request.query_params.keys()
+        if "column" in pre_keys:
+            param_keys = {key: self.request.query_params.get(key) for key in pre_keys if key != "column"}
+        else:
+            param_keys = pre_keys
+        
         for key in param_keys:
             if key not in self.valid_crime_params:
                 raise ParseError("Bad parameter: %s" % key)
@@ -646,8 +651,8 @@ class ColumnCountViewSet(CrimeViewSet):
         this_crime_params = crime_params_description
         this_crime_params["column"] = "The column to count values for"
         schema = generate_swagger_schema(this_crime_params)
-        valid_columns = ["weapon", "crimecode", "crimetime"]
-        
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood"]
+        location_columns = ["inside_outside", "neighborhood"]
         def list(self, request, *args, **kwargs):
             param_keys = self.request.query_params.keys()
             if "column" not in param_keys:
@@ -658,23 +663,41 @@ class ColumnCountViewSet(CrimeViewSet):
                     raise ParseError("Passed column not valid")
             
             if len(param_keys) == 1:
-                queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
-                flatten = {}
-                for val in queryset:
-                    if column == "crimetime":
-                        flatten[str(val[column])] = val["total"]
-                    else:
-                        flatten[val[column]] = val["total"]
-                print(flatten)
-                return Response(flatten)
-
+                if column not in self.location_columns:
+                    queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val[column])] = val["total"]
+                        else:
+                            flatten[val[column]] = val["total"]
+                    return Response(flatten)
+                else:
+                    queryset = Crimeinstances.objects.all().values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
             else:
                 queryset = super().get_queryset()
-                queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
-                flatten = {}
-                for val in queryset:
-                    if column == "crimetime":
-                        flatten[str(val[column])] = val["total"]
-                    else:
-                        flatten[val[column]] = val["total"]
+                if column not in self.location_columns:
+                        queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
+                        flatten = {}
+                        for val in queryset:
+                            if column == "crimetime":
+                                flatten[str(val[column])] = val["total"]
+                            else:
+                                flatten[val[column]] = val["total"]
+                else:
+                    queryset = queryset.values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
                 return Response(flatten)
