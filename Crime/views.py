@@ -543,7 +543,7 @@ class LocationViewSet(viewsets.ReadOnlyModelViewSet):
 
 class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PremiseSerializer
-    queryset = Locationdata.objects.order_by().values("premise").distinct()
+    queryset = Locationdata.objects.all()
 
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
@@ -551,7 +551,36 @@ class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
         #query set = self.filter_queryset(self.get_queryset())
 
         #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('premise', flat=True).order_by("premise").exclude(premise="").exclude(premise=None))
+        queryset = self.queryset.all().values("premise").exclude(premise="").exclude(premise="None").annotate(total=Count("premise")).order_by("total")
+        flatten = {}
+        for val in queryset:
+                flatten[str(val["premise"])] = val["total"]
+        values = list(flatten.keys())
+        values.sort()
+        return Response(values)
+
+class LocationColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LocationColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the location table: inside_outside, neighborhood, post, district, premise, location"})
+    queryset = Locationdata.objects.all()
+    location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
+    def list(self, request, *args, **kwargs):
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
+
+        column = self.request.query_params.get("column")
+        if column not in self.location_columns:
+                raise ParseError("Passed column not valid")
+        
+        #return a flat list of distinct values without the empty string
+        queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+        flatten = {}
+        for val in queryset:
+                flatten[str(val[column])] = val["total"]
+        values = list(flatten.keys())
+        values.sort()
+        return Response(values)
 """
 class ViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = Serializer

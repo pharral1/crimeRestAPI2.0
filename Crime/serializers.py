@@ -68,6 +68,11 @@ class PremiseSerializer(serializers.HyperlinkedModelSerializer):
         model = Locationdata
         fields = ("premise",)
 
+class LocationColumnValueSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("premise",)
+  
 class CountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
@@ -87,3 +92,4 @@ class ColumnCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("weapon",)
+
