@@ -559,6 +559,38 @@ class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
         values.sort()
         return Response(values)
 
+class CrimeColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CrimeColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the crime instances table: weapon, crimecode, description"})
+    queryset = Crimeinstances.objects.all()
+    crime_columns = ["weapon", "crimecode", "description"]
+    def list(self, request, *args, **kwargs):
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
+
+        column = self.request.query_params.get("column")
+        if column not in self.crime_columns:
+                raise ParseError("Passed column not valid")
+        
+        #return a flat list of distinct values without the empty string
+        if column != "description":
+            queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val[column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        else:
+            queryset = self.queryset.all().values("crimecode__" + column).exclude(**{"crimecode__" + column: ""}).exclude(**{"crimecode__" + column:"None"}).annotate(total=Count("crimecode__" + column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val["crimecode__" + column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        return Response(values)
+
+
 class LocationColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = LocationColumnValueSerializer
     schema = generate_swagger_schema({"column": "A column in the location table: inside_outside, neighborhood, post, district, premise, location"})
