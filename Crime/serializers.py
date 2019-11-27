@@ -3,12 +3,10 @@ from rest_framework import serializers
 from .models import *
 
 
-class CrimeSerializer(serializers.HyperlinkedModelSerializer):
-    """
-    class Meta:
-        model = Crimeinstances
-        fields = ("__all__")
-    """
+class CrimeSerializer(serializers.ModelSerializer):
+
+    #pull in all values from the foreign tables
+    description = serializers.CharField(source="crimecode.description", max_length=64)
     location = serializers.CharField(source="locationid.location",max_length=64)
     inside_outside = serializers.CharField(source="locationid.inside_outside",max_length=7)
     post = serializers.CharField(source="locationid.post",max_length=8)
@@ -17,85 +15,97 @@ class CrimeSerializer(serializers.HyperlinkedModelSerializer):
     longitude = serializers.DecimalField(source="locationid.longitude",max_digits=12, decimal_places=10)
     latitude = serializers.DecimalField(source="locationid.latitude",max_digits=12, decimal_places=10)
     premise = serializers.CharField(source="locationid.premise",max_length=48)
+    
     class Meta:
         model = Crimeinstances
-        fields = ("crimedate", "crimetime","weapon","total_incidents", "crimecode", "locationid", "location", "inside_outside", "post", "district", "neighborhood", "longitude", "latitude", "premise")
-    
-class CrimetypesSerializer(serializers.HyperlinkedModelSerializer):
+        fields = ("crimedate", "crimetime","weapon","total_incidents", "crimecode", "description", "locationid", "location", "inside_outside", "post", "district", "neighborhood", "longitude", "latitude", "premise")
+
+    #Also an option
+    """
+    class Meta:
+        model = Crimeinstances
+        fields = ("__all__")
+        depth = 1
+    """
+class CrimetypesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crimetypes
         fields = ("__all__")
 
 
-class LocationdataSerializer(serializers.HyperlinkedModelSerializer):
+class LocationdataSerializer(serializers.ModelSerializer):
     class Meta:
         model = Locationdata
         fields = ("__all__")
 
 #value list serializers
-class DescriptionSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Crimetypes
-        fields = ("description")
-
-class WeaponSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Crimeinstances
-        fields = ("weapon",)
-
-class NeighborhoodSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Locationdata
-        fields = ("neighborhood",)
-
-class PostSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Locationdata
-        fields = ("post",)
-
-class DistrictSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Locationdata
-        fields = ("district",)
-
-class LocationSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Locationdata
-        fields = ("location",)
-
-class PremiseSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Locationdata
-        fields = ("premise",)
-
-class LocationColumnValueSerializer(serializers.HyperlinkedModelSerializer):
+class LocationColumnValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Locationdata
         fields = ("__all__")
 
-class CrimeColumnValueSerializer(serializers.HyperlinkedModelSerializer):
+class CrimeColumnValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("__all__")
 
         
-class CountSerializer(serializers.HyperlinkedModelSerializer):
+class CountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("__all__")
 
-class WeaponCountSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Crimeinstances
-        fields = ("weapon",)
-
-class DateCountSerializer(serializers.HyperlinkedModelSerializer):
+class DateCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("crimedate",)
         
-class ColumnCountSerializer(serializers.HyperlinkedModelSerializer):
+class ColumnCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crimeinstances
         fields = ("weapon",)
 
+
+
+"""
+DEPRECATED - Kept for posterity
+class DescriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Crimetypes
+        fields = ("description")
+
+class WeaponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("weapon",)
+
+class NeighborhoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("neighborhood",)
+
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("post",)
+
+class DistrictSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("district",)
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("location",)
+
+class PremiseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Locationdata
+        fields = ("premise",)
+
+class WeaponCountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("weapon",)
+"""

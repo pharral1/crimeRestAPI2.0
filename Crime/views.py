@@ -464,6 +464,200 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
         except:
             raise ParseError("Invalid time format, time must be in HH:MM:SS format")
 
+
+
+class CrimeColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CrimeColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the crime instances table: weapon, crimecode, description"})
+    queryset = Crimeinstances.objects.all()
+    crime_columns = ["weapon", "crimecode", "description"]
+    def list(self, request, *args, **kwargs):
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
+
+        column = self.request.query_params.get("column")
+        if column not in self.crime_columns:
+                raise ParseError("Passed column not valid")
+        
+        #return a flat list of distinct values without the empty string
+        if column != "description":
+            queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val[column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        else:
+            queryset = self.queryset.all().values("crimecode__" + column).exclude(**{"crimecode__" + column: ""}).exclude(**{"crimecode__" + column:"None"}).annotate(total=Count("crimecode__" + column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val["crimecode__" + column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        return Response(values)
+
+
+class LocationColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LocationColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the location table: neighborhood, post, district, premise, location"})
+    queryset = Locationdata.objects.all()
+    location_columns = ["neighborhood", "post", "district", "premise", "location"]
+    def list(self, request, *args, **kwargs):
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
+
+        column = self.request.query_params.get("column")
+        if column not in self.location_columns:
+                raise ParseError("Passed column not valid")
+        
+        #return a flat list of distinct values without the empty string
+        queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+        flatten = {}
+        for val in queryset:
+                flatten[str(val[column])] = val["total"]
+        values = list(flatten.keys())
+        values.sort()
+        return Response(values)
+
+
+class CountViewSet(CrimeViewSet):
+
+        serializer_class = CountSerializer
+
+        def list(self, request, *args, **kwargs):
+            queryset = super().get_queryset()
+            count = queryset.count()
+            return Response(count)
+            
+
+class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
+
+        serializer_class = CrimetypesSerializer
+        queryset = Crimetypes.objects.all()
+
+
+class LocationdataViewSet(viewsets.ReadOnlyModelViewSet):
+        serializer_class = LocationdataSerializer
+        queryset = Locationdata.objects.all()
+
+
+
+class DateCountViewSet(CrimeViewSet):
+        serializer_class = DateCountSerializer
+        
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            
+            
+            if len(param_keys) == 0:
+                queryset = Crimeinstances.objects.all().values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)
+            else:
+                queryset = super().get_queryset()
+                queryset = queryset.values("weapon").values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)        
+
+class ColumnCountViewSet(CrimeViewSet):
+        serializer_class = ColumnCountSerializer
+        this_crime_params = crime_params_description
+        this_crime_params["column"] = "The column to count values for"
+        schema = generate_swagger_schema(this_crime_params)
+
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location"]
+
+        location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
+
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            if "column" not in param_keys:
+                    raise ParseError("Column is a required query parameter")
+
+            column = self.request.query_params.get("column")
+            if column not in self.valid_columns:
+                    raise ParseError("Passed column not valid")
+            
+            if len(param_keys) == 1:
+                if column not in self.location_columns:
+                    queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val[column])] = val["total"]
+                        else:
+                            flatten[val[column]] = val["total"]
+                    return Response(flatten)
+                else:
+                    queryset = Crimeinstances.objects.all().values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
+            else:
+                queryset = super().get_queryset()
+                if column not in self.location_columns:
+                        queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
+                        flatten = {}
+                        for val in queryset:
+                            if column == "crimetime":
+                                flatten[str(val[column])] = val["total"]
+                            else:
+                                flatten[val[column]] = val["total"]
+                else:
+                    queryset = queryset.values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
+                return Response(flatten)
+
+
+"""
+class ViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = Serializer
+    queryset = Locationdata.objects.order_by().values("").distinct()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        #query set = self.filter_queryset(self.get_queryset())
+
+        #return a flat list of distinct values without the empty string
+        return Response(self.queryset.values_list('', flat=True).order_by("").exclude(="").exclude(=None))
+
+"""
+
+"""
+DEPRECATED: kept for posterity
+
 class DescriptionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DescriptionSerializer
     queryset = Crimetypes.objects.order_by().values("description").distinct()
@@ -559,96 +753,6 @@ class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
         values.sort()
         return Response(values)
 
-class CrimeColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = CrimeColumnValueSerializer
-    schema = generate_swagger_schema({"column": "A column in the crime instances table: weapon, crimecode, description"})
-    queryset = Crimeinstances.objects.all()
-    crime_columns = ["weapon", "crimecode", "description"]
-    def list(self, request, *args, **kwargs):
-        param_keys = self.request.query_params.keys()
-        if "column" not in param_keys:
-                raise ParseError("Column is a required query parameter")
-
-        column = self.request.query_params.get("column")
-        if column not in self.crime_columns:
-                raise ParseError("Passed column not valid")
-        
-        #return a flat list of distinct values without the empty string
-        if column != "description":
-            queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
-            flatten = {}
-            for val in queryset:
-                flatten[str(val[column])] = val["total"]
-            values = list(flatten.keys())
-            values.sort()
-        else:
-            queryset = self.queryset.all().values("crimecode__" + column).exclude(**{"crimecode__" + column: ""}).exclude(**{"crimecode__" + column:"None"}).annotate(total=Count("crimecode__" + column)).order_by("total")
-            flatten = {}
-            for val in queryset:
-                flatten[str(val["crimecode__" + column])] = val["total"]
-            values = list(flatten.keys())
-            values.sort()
-        return Response(values)
-
-
-class LocationColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = LocationColumnValueSerializer
-    schema = generate_swagger_schema({"column": "A column in the location table: inside_outside, neighborhood, post, district, premise, location"})
-    queryset = Locationdata.objects.all()
-    location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
-    def list(self, request, *args, **kwargs):
-        param_keys = self.request.query_params.keys()
-        if "column" not in param_keys:
-                raise ParseError("Column is a required query parameter")
-
-        column = self.request.query_params.get("column")
-        if column not in self.location_columns:
-                raise ParseError("Passed column not valid")
-        
-        #return a flat list of distinct values without the empty string
-        queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
-        flatten = {}
-        for val in queryset:
-                flatten[str(val[column])] = val["total"]
-        values = list(flatten.keys())
-        values.sort()
-        return Response(values)
-"""
-class ViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = Serializer
-    queryset = Locationdata.objects.order_by().values("").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('', flat=True).order_by("").exclude(="").exclude(=None))
-
-"""
-
-
-class CountViewSet(CrimeViewSet):
-
-        serializer_class = CountSerializer
-
-        def list(self, request, *args, **kwargs):
-            queryset = super().get_queryset()
-            count = queryset.count()
-            return Response(count)
-            
-
-class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
-
-        serializer_class = CrimetypesSerializer
-        queryset = Crimetypes.objects.all()
-
-
-class LocationdataViewSet(viewsets.ReadOnlyModelViewSet):
-        serializer_class = LocationdataSerializer
-        queryset = Locationdata.objects.all()
-
 class WeaponCountViewSet(CrimeViewSet):
         serializer_class = WeaponCountSerializer
         
@@ -670,98 +774,4 @@ class WeaponCountViewSet(CrimeViewSet):
                 for val in queryset:
                     flatten[val["weapon"]] = val["total"]
                 return Response(flatten)
-
-class DateCountViewSet(CrimeViewSet):
-        serializer_class = WeaponCountSerializer
-        
-        def list(self, request, *args, **kwargs):
-            param_keys = self.request.query_params.keys()
-            
-            
-            if len(param_keys) == 0:
-                queryset = Crimeinstances.objects.all().values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
-
-                flatten = {}
-                for val in queryset:
-                    if val["crimedate__year"] not in flatten.keys():
-                        flatten[val["crimedate__year"]] = {}
-                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
-                    else:
-                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
-                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
-                        else:
-                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
-                return Response(flatten)
-            else:
-                queryset = super().get_queryset()
-                queryset = queryset.values("weapon").values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
-                flatten = {}
-                for val in queryset:
-                    if val["crimedate__year"] not in flatten.keys():
-                        flatten[val["crimedate__year"]] = {}
-                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
-                    else:
-                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
-                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
-                        else:
-                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
-                return Response(flatten)        
-
-class ColumnCountViewSet(CrimeViewSet):
-        serializer_class = ColumnCountSerializer
-        this_crime_params = crime_params_description
-        this_crime_params["column"] = "The column to count values for"
-        schema = generate_swagger_schema(this_crime_params)
-
-        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location"]
-
-        location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
-
-        def list(self, request, *args, **kwargs):
-            param_keys = self.request.query_params.keys()
-            if "column" not in param_keys:
-                    raise ParseError("Column is a required query parameter")
-
-            column = self.request.query_params.get("column")
-            if column not in self.valid_columns:
-                    raise ParseError("Passed column not valid")
-            
-            if len(param_keys) == 1:
-                if column not in self.location_columns:
-                    queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
-                    flatten = {}
-                    for val in queryset:
-                        if column == "crimetime":
-                             flatten[str(val[column])] = val["total"]
-                        else:
-                            flatten[val[column]] = val["total"]
-                    return Response(flatten)
-                else:
-                    queryset = Crimeinstances.objects.all().values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
-                    flatten = {}
-                    for val in queryset:
-                        if column == "crimetime":
-                             flatten[str(val["locationid__" + column])] = val["total"]
-                        else:
-                            flatten[val["locationid__" + column]] = val["total"]
-                    return Response(flatten)
-            else:
-                queryset = super().get_queryset()
-                if column not in self.location_columns:
-                        queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
-                        flatten = {}
-                        for val in queryset:
-                            if column == "crimetime":
-                                flatten[str(val[column])] = val["total"]
-                            else:
-                                flatten[val[column]] = val["total"]
-                else:
-                    queryset = queryset.values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
-                    flatten = {}
-                    for val in queryset:
-                        if column == "crimetime":
-                             flatten[str(val["locationid__" + column])] = val["total"]
-                        else:
-                            flatten[val["locationid__" + column]] = val["total"]
-                    return Response(flatten)
-                return Response(flatten)
+"""
