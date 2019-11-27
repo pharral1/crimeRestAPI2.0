@@ -4,10 +4,18 @@ from .models import *
 
 
 class CrimeSerializer(serializers.HyperlinkedModelSerializer):
+    """
     class Meta:
         model = Crimeinstances
         fields = ("__all__")
-        
+    """
+    inside_outside = serializers.CharField(source="locationid.inside_outside")
+    longitude = serializers.CharField(source="locationid.longitude")
+    
+    class Meta:
+        model = Crimeinstances
+        fields = ("crimedate", "crimetime","weapon","total_incidents", "crimecode", "locationid", "inside_outside", "longitude")
+    
 class CrimetypesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Crimetypes

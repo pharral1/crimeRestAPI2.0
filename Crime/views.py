@@ -133,7 +133,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Crimeinstances.objects.all().select_related("locationid")
+        queryset = Crimeinstances.objects.all()
        
         param_keys = self.request.query_params.keys()
 
