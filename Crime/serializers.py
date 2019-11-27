@@ -9,14 +9,14 @@ class CrimeSerializer(serializers.HyperlinkedModelSerializer):
         model = Crimeinstances
         fields = ("__all__")
     """
-    location = serializers.CharField(max_length=64)
-    inside_outside = serializers.CharField(max_length=7)
-    post = serializers.CharField(max_length=8)
-    district = serializers.CharField(max_length=64)
-    neighborhood = serializers.CharField(max_length=64)
-    longitude = modesl.DecimalField(max_digits=12, decimal_places=10)
-    latitude = serializers.DecimalField(max_digits=12, decimal_places=10)
-    premise = serializers.CharField(max_length=48)
+    location = serializers.CharField(source="locationid.location",max_length=64)
+    inside_outside = serializers.CharField(source="locationid.inside_outside",max_length=7)
+    post = serializers.CharField(source="locationid.post",max_length=8)
+    district = serializers.CharField(source="locationid.district",max_length=64)
+    neighborhood = serializers.CharField(source="locationid.neighborhood",max_length=64)
+    longitude = serializers.DecimalField(source="locationid.longitude",max_digits=12, decimal_places=10)
+    latitude = serializers.DecimalField(source="locationid.latitude",max_digits=12, decimal_places=10)
+    premise = serializers.CharField(source="locationid.premise",max_length=48)
     class Meta:
         model = Crimeinstances
         fields = ("crimedate", "crimetime","weapon","total_incidents", "crimecode", "locationid", "location", "inside_outside", "post", "district", "neighborhood", "longitude", "latitude", "premise")
