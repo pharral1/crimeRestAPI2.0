@@ -651,8 +651,11 @@ class ColumnCountViewSet(CrimeViewSet):
         this_crime_params = crime_params_description
         this_crime_params["column"] = "The column to count values for"
         schema = generate_swagger_schema(this_crime_params)
-        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood"]
-        location_columns = ["inside_outside", "neighborhood"]
+
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location"]
+
+        location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
+
         def list(self, request, *args, **kwargs):
             param_keys = self.request.query_params.keys()
             if "column" not in param_keys:
