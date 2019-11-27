@@ -70,3 +70,7 @@ class DateCountSerializer(serializers.HyperlinkedModelSerializer):
         model = Crimeinstances
         fields = ("crimedate",)
         
+class ColumnCountSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Crimeinstances
+        fields = ("weapon",)

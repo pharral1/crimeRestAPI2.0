@@ -92,7 +92,8 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
                           "crimetime_range",
                           "crimetime_lte",
                           "crimetime_gte",
-                          ]
+                          "column",
+    ]
 
     schema = generate_swagger_schema(crime_params_description)
     
@@ -132,7 +133,7 @@ class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Crimeinstances.objects.all()
+        queryset = Crimeinstances.objects.all().select_related("locationid")
        
         param_keys = self.request.query_params.keys()
 
@@ -639,3 +640,41 @@ class DateCountViewSet(CrimeViewSet):
                         else:
                             flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
                 return Response(flatten)        
+
+class ColumnCountViewSet(CrimeViewSet):
+        serializer_class = ColumnCountSerializer
+        this_crime_params = crime_params_description
+        this_crime_params["column"] = "The column to count values for"
+        schema = generate_swagger_schema(this_crime_params)
+        valid_columns = ["weapon", "crimecode", "crimetime"]
+        
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            if "column" not in param_keys:
+                    raise ParseError("Column is a required query parameter")
+
+            column = self.request.query_params.get("column")
+            if column not in self.valid_columns:
+                    raise ParseError("Passed column not valid")
+            
+            if len(param_keys) == 1:
+                queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
+                flatten = {}
+                for val in queryset:
+                    if column == "crimetime":
+                        flatten[str(val[column])] = val["total"]
+                    else:
+                        flatten[val[column]] = val["total"]
+                print(flatten)
+                return Response(flatten)
+
+            else:
+                queryset = super().get_queryset()
+                queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
+                flatten = {}
+                for val in queryset:
+                    if column == "crimetime":
+                        flatten[str(val[column])] = val["total"]
+                    else:
+                        flatten[val[column]] = val["total"]
+                return Response(flatten)
