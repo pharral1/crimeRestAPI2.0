@@ -11,21 +11,7 @@ router.register(r'crime-column-value', views.CrimeColumnValueViewSet, "crime-col
 router.register(r'location-column-value', views.LocationColumnValueViewSet, "location-column-value")
 router.register(r'date-count', views.DateCountViewSet, "date-count")
 router.register(r'column-count', views.ColumnCountViewSet, "column-count")
-
-
-"""
-DEPRECATED
-router.register(r'weapon-count', views.WeaponCountViewSet, "weapon-count")
-router.register(r'description', views.DescriptionViewSet, "description")
-router.register(r'weapon', views.WeaponViewSet, "weapon")
-router.register(r'neighborhood', views.NeighborhoodViewSet, "neighborhood")
-router.register(r'post', views.PostViewSet, "post")
-router.register(r'district', views.DistrictViewSet, "district")
-router.register(r'location', views.LocationViewSet, "location")
-router.register(r'premise', views.PremiseViewSet, "premise")
-"""
-
-
+router.register(r'latitude-longitude', views.LatitudeLongitudeViewSet, "latitude-longitude")
 """
 router.register(r'', views.ViewSet, "")
 """

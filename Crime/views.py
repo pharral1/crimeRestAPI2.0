@@ -640,138 +640,20 @@ class ColumnCountViewSet(CrimeViewSet):
                 return Response(flatten)
 
 
-"""
-class ViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = Serializer
-    queryset = Locationdata.objects.order_by().values("").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('', flat=True).order_by("").exclude(="").exclude(=None))
-
-"""
-
-"""
-DEPRECATED: kept for posterity
-
-class DescriptionViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = DescriptionSerializer
-    queryset = Crimetypes.objects.order_by().values("description").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('description', flat=True).order_by("description").exclude(description="").exclude(description=None))
-
-class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = WeaponSerializer
-    queryset = Crimeinstances.objects.values("weapon").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        #currently need to cast weapon as char through extra() call as weapon is stored as an ENUM and sort works on an enum index basis in SQL
-        return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
-
-
-    
-class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = NeighborhoodSerializer
-    queryset = Locationdata.objects.order_by().values("neighborhood").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood="").exclude(neighborhood=None))
-
-
-class PostViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = PostSerializer
-    queryset = Locationdata.objects.order_by().values("post").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('post', flat=True).order_by("post").exclude(post="").exclude(post=None))
-
-class DistrictViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = DistrictSerializer
-    queryset = Locationdata.objects.order_by().values("district").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('district', flat=True).order_by("district").exclude(district="").exclude(district=None))
-
-
-class LocationViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = LocationSerializer
-    queryset = Locationdata.objects.order_by().values("location").distinct()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('location', flat=True).order_by("location").exclude(location="").exclude(location=None))
-
-class PremiseViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = PremiseSerializer
-    queryset = Locationdata.objects.all()
-
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
-    def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
-
-        #return a flat list of distinct values without the empty string
-        queryset = self.queryset.all().values("premise").exclude(premise="").exclude(premise="None").annotate(total=Count("premise")).order_by("total")
-        flatten = {}
-        for val in queryset:
-                flatten[str(val["premise"])] = val["total"]
-        values = list(flatten.keys())
-        values.sort()
-        return Response(values)
-
-class WeaponCountViewSet(CrimeViewSet):
-        serializer_class = WeaponCountSerializer
         
-        def list(self, request, *args, **kwargs):
-            param_keys = self.request.query_params.keys()
-            
-            
-            if len(param_keys) == 0:
-                queryset = Crimeinstances.objects.all().values("weapon").annotate(total=Count("weapon")).order_by("total")
-                flatten = {}
-                for val in queryset:
-                    flatten[val["weapon"]] = val["total"]
-                return Response(flatten)
 
-            else:
-                queryset = super().get_queryset()
-                queryset = queryset.values("weapon").annotate(total=Count("weapon")).order_by("total")
-                flatten = {}
-                for val in queryset:
-                    flatten[val["weapon"]] = val["total"]
-                return Response(flatten)
-"""
+
+class LatitudeLongitudeViewSet(CrimeViewSet):
+    serializer_class = LatitudeLongitudeSerializer
+    queryset = Crimeinstances.objects.all().order_by()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+        #original example has the following, but the below works just as well without the second filter call
+        queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude")
+
+        flatten = [(loc["locationid__latitude"], loc["locationid__longitude"]) for loc in queryset]
+        return Response(flatten)
+
+
+
