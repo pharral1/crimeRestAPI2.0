@@ -586,9 +586,10 @@ class ColumnCountViewSet(CrimeViewSet):
         this_crime_params["column"] = "The column to count values for"
         schema = generate_swagger_schema(this_crime_params)
 
-        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location"]
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location", "description"]
 
         location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
+        type_columns = ["description"]
 
         def list(self, request, *args, **kwargs):
             param_keys = self.request.query_params.keys()
@@ -600,7 +601,7 @@ class ColumnCountViewSet(CrimeViewSet):
                     raise ParseError("Passed column not valid")
             
             if len(param_keys) == 1:
-                if column not in self.location_columns:
+                if column not in self.location_columns and column not in self.type_columns:
                     queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
                     flatten = {}
                     for val in queryset:
@@ -609,7 +610,7 @@ class ColumnCountViewSet(CrimeViewSet):
                         else:
                             flatten[val[column]] = val["total"]
                     return Response(flatten)
-                else:
+                elif column not in self.type_columns:
                     queryset = Crimeinstances.objects.all().values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
                     flatten = {}
                     for val in queryset:
@@ -618,9 +619,15 @@ class ColumnCountViewSet(CrimeViewSet):
                         else:
                             flatten[val["locationid__" + column]] = val["total"]
                     return Response(flatten)
+                else:
+                    queryset = Crimeinstances.objects.all().values("crimecode__" + column, ).exclude(**{"crimecode__" + column: ""}).annotate(total=Count("crimecode__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        flatten[val["crimecode__" + column]] = val["total"]
+                    return Response(flatten)
             else:
                 queryset = super().get_queryset()
-                if column not in self.location_columns:
+                if column not in self.location_columns and column not in self.type_columns:
                         queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
                         flatten = {}
                         for val in queryset:
@@ -628,7 +635,7 @@ class ColumnCountViewSet(CrimeViewSet):
                                 flatten[str(val[column])] = val["total"]
                             else:
                                 flatten[val[column]] = val["total"]
-                else:
+                elif column not in self.type_columns:
                     queryset = queryset.values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
                     flatten = {}
                     for val in queryset:
@@ -636,6 +643,12 @@ class ColumnCountViewSet(CrimeViewSet):
                              flatten[str(val["locationid__" + column])] = val["total"]
                         else:
                             flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
+                else:
+                    queryset = queryset.values("crimecode__" + column, ).exclude(**{"crimecode__" + column: ""}).annotate(total=Count("crimecode__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        flatten[val["crimecode__" + column]] = val["total"]
                     return Response(flatten)
                 return Response(flatten)
 
