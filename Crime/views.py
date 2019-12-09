@@ -650,7 +650,7 @@ class LatitudeLongitudeViewSet(CrimeViewSet):
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
         #original example has the following, but the below works just as well without the second filter call
-        queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude")
+        queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
 
         flatten = [(loc["locationid__latitude"], loc["locationid__longitude"]) for loc in queryset]
         return Response(flatten)
