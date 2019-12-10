@@ -602,7 +602,10 @@ class ColumnCountViewSet(CrimeViewSet):
             
             if len(param_keys) == 1:
                 if column not in self.location_columns and column not in self.type_columns:
-                    queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
+                    if(column == "crimetime"):
+                        queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).order_by("crimetime").annotate(total=Count(column))
+                    else:
+                        queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
                     flatten = {}
                     for val in queryset:
                         if column == "crimetime":
@@ -628,7 +631,10 @@ class ColumnCountViewSet(CrimeViewSet):
             else:
                 queryset = super().get_queryset()
                 if column not in self.location_columns and column not in self.type_columns:
-                        queryset = queryset.values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
+                        if(column == "crimetime"):
+                            queryset = queryset.values(column).exclude(**{column: None}).order_by("crimetime").annotate(total=Count(column))
+                        else:
+                            queryset = queryset.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
                         flatten = {}
                         for val in queryset:
                             if column == "crimetime":
