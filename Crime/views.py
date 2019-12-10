@@ -634,7 +634,7 @@ class ColumnCountViewSet(CrimeViewSet):
                         if(column == "crimetime"):
                             queryset = queryset.values(column).exclude(**{column: None}).order_by("crimetime").annotate(total=Count(column))
                         else:
-                            queryset = queryset.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
+                            queryset = queryset.values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
                         flatten = {}
                         for val in queryset:
                             if column == "crimetime":
@@ -668,11 +668,25 @@ class LatitudeLongitudeViewSet(CrimeViewSet):
 
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def list(self, request, *args, **kwargs):
+
+
+        queryset = super().get_queryset().filter(locationid__longitude__gte=-78, locationid__latitude__gte=39.11).values_list("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None}).distinct().annotate(total=Count("locationid"))
+        
+        flatten = queryset
+        """
+        totals = {}
+        for loc in queryset:
+            if loc["locationid__longitude"] > -78.0 and loc["locationid__latitude"] > 39.11:
+                flatten.append([loc["locationid__latitude"], loc["locationid__longitude"], loc["total"]])
+
+        
+
         #original example has the following, but the below works just as well without the second filter call
         queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
 
         flatten = [(loc["locationid__latitude"], loc["locationid__longitude"]) for loc in queryset if loc["locationid__longitude"] > -78.0 and loc["locationid__latitude"] > 39.11]
         return Response(flatten)
-
+        """
+        return Response(flatten)
 
 
