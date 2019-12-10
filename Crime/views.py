@@ -586,7 +586,7 @@ class ColumnCountViewSet(CrimeViewSet):
         this_crime_params["column"] = "The column to count values for"
         schema = generate_swagger_schema(this_crime_params)
 
-        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location", "description"]
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location", "description", "crimetime"]
 
         location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
         type_columns = ["description"]
@@ -602,7 +602,7 @@ class ColumnCountViewSet(CrimeViewSet):
             
             if len(param_keys) == 1:
                 if column not in self.location_columns and column not in self.type_columns:
-                    queryset = Crimeinstances.objects.all().values(column).annotate(total=Count(column)).order_by("total")
+                    queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
                     flatten = {}
                     for val in queryset:
                         if column == "crimetime":
@@ -628,7 +628,7 @@ class ColumnCountViewSet(CrimeViewSet):
             else:
                 queryset = super().get_queryset()
                 if column not in self.location_columns and column not in self.type_columns:
-                        queryset = queryset.values(column).annotate(total=Count(column)).order_by("total")
+                        queryset = queryset.values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
                         flatten = {}
                         for val in queryset:
                             if column == "crimetime":
