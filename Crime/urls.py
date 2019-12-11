@@ -12,6 +12,8 @@ router.register(r'location-column-value', views.LocationColumnValueViewSet, "loc
 router.register(r'date-count', views.DateCountViewSet, "date-count")
 router.register(r'column-count', views.ColumnCountViewSet, "column-count")
 router.register(r'latitude-longitude', views.LatitudeLongitudeViewSet, "latitude-longitude")
+router.register(r'latitude-longitude-all', views.LatitudeLongitudeAllViewSet, "latitude-longitude-all")\
+
 """
 router.register(r'', views.ViewSet, "")
 """

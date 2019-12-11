@@ -681,6 +681,7 @@ class LatitudeLongitudeViewSet(CrimeViewSet):
 
         
 
+
         #original example has the following, but the below works just as well without the second filter call
         queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
 
@@ -688,5 +689,16 @@ class LatitudeLongitudeViewSet(CrimeViewSet):
         return Response(flatten)
         """
         return Response(flatten)
+
+class LatitudeLongitudeAllViewSet(CrimeViewSet):
+    serializer_class = LatLongAllSerializer
+    queryset = Crimeinstances.objects.all().order_by()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def get_queryset(self):
+
+        queryset = super().get_queryset().order_by("locationid__neighborhood").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
+            
+        return queryset
 
 
