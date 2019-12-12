@@ -697,8 +697,10 @@ class LatitudeLongitudeAllViewSet(CrimeViewSet):
     #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
     def get_queryset(self):
 
-        queryset = super().get_queryset().order_by("locationid__latitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
+        queryset = super().get_queryset().order_by("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
+        
             
         return queryset
+
 
 
