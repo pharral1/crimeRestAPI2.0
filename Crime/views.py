@@ -1,23 +1,28 @@
+#django imports
 from django.shortcuts import render
-
-import json
 from rest_framework.schemas import AutoSchema
 import coreapi
-from .models import Inputdata, Crimeinstances, Crimetypes, Locationdata
+from .models import *
 from rest_framework import viewsets
-from .serializers import InputdataSerializer, CrimeSerializer, CrimetypesSerializer, WeaponSerializer, NeighborhoodSerializer, CountSerializer
+from .serializers import *
 from rest_framework.exceptions import *
 from django.db.models.manager import Manager
 from rest_framework.response import Response
+from django.db.models import Count
+
+#python imports
+import json
+import time
+from datetime import datetime
 
 crime_params_description = {"inside_outside": 'Location, either "inside" or "outside" of a building.',
                             "crimedate": 'Date the crime was committed, must be in YYYY-MM-DD format.',
-                            "date_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
-                            "date_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
-                            "date_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
-                            "year": "A year in YYYY integer format.",
-                            "month": "A month in MM integer format.",
-                            "day": "A day in DD integer format.",
+                            "crimedate_range": "Range of two dates, must be in a FROM,TO format: YYYY-MM-DD,YYYY-MM-DD.",
+                            "crimedate_lte": "A date in YYYY-MM-DD format, will return all dates less than or equal to this date.",
+                            "crimedate_gte": "A date in YYYY-MM-DD format, will return all dates greater than or equal to this date.",
+                            "crimedate_year": "A year in YYYY integer format.",
+                            "crimedate_month": "A month in MM integer format.",
+                            "crimedate_day": "A day in DD integer format.",
                             "weapon": "A weapon, must be one of the enumerated types.",
                             "location": "A street address, do not include anything after the street.",
                             "latitude": "Latitude, in float format.",
@@ -35,6 +40,9 @@ crime_params_description = {"inside_outside": 'Location, either "inside" or "out
                             "crimecode": "The code used to describe the crime.",
                             "description": "The description of the crime.",
                             "crimetime": "The time at which the crime occurred in HH:MM:SS format.",
+                            "crimetime_range": "A range of times in HH:MM:SS,HH:MM:SS format.",
+                            "crimetime_lte": "A time that will be the upper range for a lte operation in HH:MM:SS foramt.",
+                            "crimetime_gte": "A time that will be the lower range for a gte operation in HH:MM:SS foramt.",
                            }
 
 #generates the AutoSchema used by swagger from a {parameter: description} dictionary (see above)
@@ -50,20 +58,20 @@ def generate_swagger_schema(description_dict):
         return AutoSchema(manual_fields=manual_fields)
 
 
-class InputdataViewSet(viewsets.ModelViewSet):
+class CrimeViewSet(viewsets.ReadOnlyModelViewSet):
     
-    serializer_class = InputdataSerializer
+    serializer_class = CrimeSerializer
     
     valid_crime_params = ["page",
                           "format",
                           "inside_outside",
                           "crimedate",
-                          "date_range",
-                          "date_lte",
-                          "date_gte",
-                          "year",
-                          "month",
-                          "day",
+                          "crimedate_range",
+                          "crimedate_lte",
+                          "crimedate_gte",
+                          "crimedate_year",
+                          "crimedate_month",
+                          "crimedate_day",
                           "location",
                           "latitude",
                           "latitude_lte",
@@ -81,7 +89,11 @@ class InputdataViewSet(viewsets.ModelViewSet):
                           "crimecode",
                           "description",
                           "crimetime",
-                          ]
+                          "crimetime_range",
+                          "crimetime_lte",
+                          "crimetime_gte",
+                          "column",
+    ]
 
     schema = generate_swagger_schema(crime_params_description)
     
@@ -102,104 +114,146 @@ class InputdataViewSet(viewsets.ModelViewSet):
                           ]
     
     all_date_params = ["crimedate",
-                       "date_range",
-                       "date_lte",
-                       "date_gte",
-                       "year",
-                       "month",
-                       "day"
+                       "crimedate_range",
+                       "crimedate_lte",
+                       "crimedate_gte",
+                       "crimedate_year",
+                       "crimedate_month",
+                       "crimedate_day",
+                       "crimetime",
+                       "crimetime_range",
+                       "crimetime_lte",
+                       "crimetime_gte",
                       ]
     main_params = ["weapon",
                    "crimecode",
                    "description",
-                   "crimetime",
-                   "crimedate"
                   ]
 
-    def create(self, request, pk=None):
-        print("In create")
-        print(json.loads(request.data))
-        return Response(None)
-    def update(self, request, pk=None):
-        print("In update")
-        print(request)
-        print(dir(request))
-        return Response(None)
-            
     def get_queryset(self):
 
         #prepare queryset object to allow function calls on it but not getting all items in dataset
-        queryset = Inputdata.objects
+        queryset = Crimeinstances.objects.all()
 
-        param_keys = self.request.query_params.keys()
-
+        #need to extract the column value from the param keys if the request has been routed here from the column-count class
+        pre_keys = self.request.query_params.keys()
+        if "column" in pre_keys:
+            param_keys = {key: self.request.query_params.get(key) for key in pre_keys if key != "column"}
+        else:
+            param_keys = pre_keys
+        
         for key in param_keys:
             if key not in self.valid_crime_params:
                 raise ParseError("Bad parameter: %s" % key)
-
-        #if there are no query params and/or there are no query parameters
-        #plus a page number or format type, get all, and allow for pagination or formatting still
-        if not self.request.query_params.keys() or \
-           ("page" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
-           ("format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 1) or \
-           ("page" in self.request.query_params.keys() and "format" in self.request.query_params.keys() and len(self.request.query_params.keys()) == 2):
         
-            queryset = Inputdata.objects.all()
+        if any(element in self.all_location_params for element in param_keys):
+           queryset =  self.parse_location(queryset)
+
+        if any(element in self.all_date_params for element in param_keys):    
+            queryset = self.parse_datetime(queryset)
 
         if any(element in self.main_params for element in param_keys):
             queryset = self.parse_details(queryset)
-            
-        if any(element in self.all_location_params for element in param_keys):
-            queryset = self.parse_location(queryset)
-
-        if any(element in self.all_date_params for element in param_keys):    
-            queryset = self.parse_date(queryset)
-
-        
-        
+                      
         #if query set has not been modified by here, then no filtering has been done,
         #this will be due to bad parameters, so raise a ParseError which returns a 400 bad request
         if isinstance(queryset, Manager):
             raise ParseError("Bad parameters")
 
-        queryset.order_by("id")
+        queryset = queryset.order_by("crimeid")
+        return queryset
+
+    def parse_details(self, queryset):
+
+        #weapon parsing
+        #split input on comma to find combined fields
+        weapon = self.request.query_params.get("weapon", None)
+        if weapon is not None:
+            if "," in weapon:
+                weapon = weapon.split(",")
+                queryset = queryset.filter(weapon__in=weapon)
+            else:
+                queryset = queryset.filter(weapon=weapon)
+
+        crimecode = self.request.query_params.get("crimecode", None)
+        if crimecode is not None:
+            if "," in crimecode:
+                crimecode = crimecode.split(",")
+                queryset = queryset.filter(crimecode__in=crimecode)
+            else:
+                queryset = queryset.filter(crimecode=crimecode)
+
+        description = self.request.query_params.get("description", None)
+        if description is not None:
+            if "," in description:
+                description = description.split(",")
+                queryset = queryset.filter(crimecode__description__in=description)
+            else:
+                queryset = queryset.filter(crimecode__description=description)
+
         return queryset
     
     def parse_location(self, queryset):
-        print("Found location parameter")
+        
+        district = self.request.query_params.get("district", None)
+        if district is not None:
+            if "," in district:
+                district = district.split(",")
+                queryset = queryset.filter(locationid__district__in=district)
+            else:
+                queryset = queryset.filter(locationid__district=district)
+
+        neighborhood = self.request.query_params.get("neighborhood", None)
+        if neighborhood is not None:
+            if "," in neighborhood:
+                neighborhood = neighborhood.split(",")
+                queryset = queryset.filter(locationid__neighborhood__in=neighborhood)
+            else:
+                queryset = queryset.filter(locationid__neighborhood=neighborhood)
+
+        location = self.request.query_params.get("location", None)
+        if location is not None:
+            if "," in location:
+                location = location.split(",")
+                queryset = queryset.filter(locationid__location__in=location)
+            else:
+                queryset = queryset.filter(locationid__location=location)
+                
+        premise = self.request.query_params.get("premise", None)
+        if premise is not None:
+            if "," in premise:
+                premise = premise.split(",")
+                queryset = queryset.filter(locationid__premise__in=premise)
+            else:
+                queryset = queryset.filter(locationid__premise=premise)
 
         #inside outside parsing
         inside_outside = self.request.query_params.get('inside_outside', None)
         
-        if inside_outside is not None:
-            if inside_outside == "inside":
-                queryset = queryset.filter(inside_outside="I")
-            elif inside_outside == "outside":
-                queryset = queryset.filter(inside_outside="O")
-            else:
-                raise ParseError("Bad parameters, inside_outside must be 'inside' or 'outside'")
-
-        #post parsing    
-        post = self.request.query_params.get("post", None)
+        if inside_outside is not None and inside_outside not in ["Inside", "Outside"]:
+            raise ParseError("Bad parameters, inside_outside must be 'Inside' or 'Outside'")
+        elif inside_outside is not None:
+            queryset = queryset.filter(locationid__inside_outside=inside_outside)
+            
+        #post number parsing
+        post = self.request.query_params.get('post', None)
         if post is not None:
-            try:
-                int(post)
-            except:
-                raise ParseError("Bad parameters, post must be an int")
-            queryset = queryset.filter(post=post)
-
-        #location parsing
-        #locations will contain spaces within them, these can be encoded in the url as %20 or the + character (latter is unsafe)
-        #eg: <url>?location=4300%20DAVIS%20AVE OR <url>?location=4300+DAVIS+AVE
-        location = self.request.query_params.get("location", None)
-        if location is not None:
-            queryset = queryset.filter(location=location)
+            if "," in post:
+                post = post.split(",")
+                queryset = queryset.filter(locationid__post__in=post)
+            else:
+                queryset = queryset.filter(locationid__post=post)
 
         #latitude parsing
-        latitude = self.request.query_params.get("latitude", None)
+        latitude = self.request.query_params.get('latitude', None)
         if latitude is not None:
-            queryset = queryset.filter(latitude=latitude)
-
+            try:
+                latitude = float(latitude)
+            except:
+                raise ParseError("Bad parameters, latitude must be a float")
+        
+            queryset = queryset.filter(locationid__latitude=latitude)
+        
         #latitude range parsing, split two latitudes on a range
         latitude_range = self.request.query_params.get("latitude_range", None)
         if latitude_range is not None:
@@ -215,32 +269,35 @@ class InputdataViewSet(viewsets.ModelViewSet):
                     float(i)
             except:
                 raise ParseError("Bad parameters, latitude_range must provide two floats")
-            
-            #appending a __range to the crime date value calls a built in range class
-            queryset = queryset.filter(latitude__range=latitude_range)
-
+            queryset = queryset.filter(locationid__latitude__range=latitude_range)
+                
         #latitude greater than and less than parsing
         latitude_lte = self.request.query_params.get("latitude_lte", None)
         if latitude_lte is not None:
             try:
                 float(latitude_lte)
             except:
-                raise ParseError("Bad parameters, latitude must provide a float")
-            queryset = queryset.filter(latitude__lte=latitude_lte)
-
+                raise ParseError("Bad parameters, latitude_lte must provide a float")
+            queryset = queryset.filter(locationid__latitude__lte=latitude_lte)
+        
         latitude_gte = self.request.query_params.get("latitude_gte", None)
         if latitude_gte is not None:
             try:
                 float(latitude_gte)
             except:
-                raise ParseError("Bad parameters, latitude must provide a float")
-            queryset = queryset.filter(latitude__gte=latitude_gte)
+                raise ParseError("Bad parameters, latitude_gte must provide a float")
+            queryset = queryset.filter(locationid__latitude__gte=latitude_gte)
 
         #longitude parsing
-        longitude = self.request.query_params.get("longitude", None)
+        longitude = self.request.query_params.get('longitude', None)
         if longitude is not None:
-            queryset = queryset.filter(longitude=longitude)
-
+            try:
+                longitude = float(longitude)
+            except:
+                raise ParseError("Bad parameters, latitude must be a float")
+        
+            queryset = queryset.filter(locationid__longitude=longitude)
+            
         #longitude range parsing, split two longitudes on a range
         longitude_range = self.request.query_params.get("longitude_range", None)
         if longitude_range is not None:
@@ -256,197 +313,392 @@ class InputdataViewSet(viewsets.ModelViewSet):
                     float(i)
             except:
                 raise ParseError("Bad parameters, longitude_range must provide two floats")
+            queryset = queryset.filter(locationid__longitude__range=longitude_range)
             
-            #appending a __range to the crime date value calls a built in range class
-            queryset = queryset.filter(longitude__range=longitude_range)
-
         #longitude greater than and less than parsing
         longitude_lte = self.request.query_params.get("longitude_lte", None)
         if longitude_lte is not None:
             try:
                 float(longitude_lte)
             except:
-                raise ParseError("Bad parameters, longitude must provide a float")
-            queryset = queryset.filter(longitude__lte=longitude_lte)
-
+                raise ParseError("Bad parameters, longitude_lte must provide a float")
+            queryset = queryset.filter(locationid__longitude__lte=longitude_lte)
+            
         longitude_gte = self.request.query_params.get("longitude_gte", None)
         if longitude_gte is not None:
             try:
                 float(longitude_gte)
             except:
                 raise ParseError("Bad parameters, longitude_gte must provide a float")
-            queryset = queryset.filter(longitude__gte=longitude_gte)
-
-        #district parsing
-        district = self.request.query_params.get("district", None)
-        if district is not None:
-            queryset = queryset.filter(district=district)
-
-        neighborhood = self.request.query_params.get("neighborhood", None)
-        if neighborhood is not None:
-            queryset = queryset.filter(neighborhood=neighborhood)
-
-        premise = self.request.query_params.get("premise", None)
-        if premise is not None:
-            queryset = queryset.filter(premise=premise)
+            queryset = queryset.filter(locationid__longitude__gte=longitude_gte)
             
         return queryset
     
-    def parse_date(self, queryset):
-        print("Found date parameter")
-        #crime date parsing
-        base_date = self.request.query_params.get('crimedate', None)
-        if base_date is not None:
-            queryset = queryset.filter(crimedate=base_date) 
-
+    def parse_datetime(self, queryset):
+ 
         #date range parsing, splits two dates on a comma delimiter
-        date_range = self.request.query_params.get("date_range", None)
+        date_range = self.request.query_params.get("crimedate_range", None)
         if date_range is not None:
             date_range = date_range.split(",")
             if len(date_range) != 2:
-                raise ParseError("Bad parameters, date_range must provide date values")
-            #appending a __range to the crime date value calls a built in range class
+                raise ParseError("Bad parameters, crimedate_range must provide date values")
+            self.validate_date(date_range[0])
+            self.validate_date(date_range[1])
             queryset = queryset.filter(crimedate__range=date_range)
 
-        date_lte = self.request.query_params.get("date_lte", None)
-        if date_lte is not None:
-            queryset = queryset.filter(crimedate__lte=date_lte)
+        #date value pasrsing
+        crimedate = self.request.query_params.get("crimedate", None)
+        if crimedate is not None:
+            if "," in crimedate:
+                crimedate = crimedate.split(",")
+                for date in crimedate:
+                    self.validate_date(date)
+                queryset = queryset.filter(crimedate__in=crimedate)
+            else:
+                self.validate_date(crimedate)
+                queryset = queryset.filter(crimedate=crimedate)
 
-        date_gte = self.request.query_params.get("date_gte", None)
+        crimedate_year = self.request.query_params.get("crimedate_year", None)
+        if crimedate_year is not None:
+            if "," in crimedate_year:
+                crimedate_year = crimedate_year.split(",")
+                for year in crimedate_year:
+                    try:
+                        int(year)
+                    except:
+                        raise ParseError("Year must be an integer")
+                queryset = queryset.filter(crimedate__year__in=crimedate_year)
+            else:
+                try:
+                    int(crimedate_year)
+                except:
+                    raise ParseError("Year must be an integer")
+                queryset = queryset.filter(crimedate__year=crimedate_year)
+
+        crimedate_month = self.request.query_params.get("crimedate_month", None)
+        if crimedate_month is not None:
+            if "," in crimedate_month:
+                crimedate_month = crimedate_month.split(",")
+                for month in crimedate_month:
+                    try:
+                        int(month)
+                    except:
+                        raise ParseError("Month must be an integer")
+                queryset = queryset.filter(crimedate__month__in=crimedate_month)
+            else:
+                try:
+                    int(crimedate_month)
+                except:
+                    raise ParseError("Month must be an integer")
+                queryset = queryset.filter(crimedate__month=crimedate_month)
+
+        crimedate_day = self.request.query_params.get("crimedate_day", None)
+        if crimedate_day is not None:
+            if "," in crimedate_day:
+                crimedate_day = crimedate_day.split(",")
+                for day in crimedate_day:
+                    try:
+                        int(day)
+                    except:
+                        raise ParseError("Day must be an integer")
+                queryset = queryset.filter(crimedate__day__in=crimedate_day)
+            else:
+                try:
+                    int(crimedate_day)
+                except:
+                    raise ParseError("Day must be an integer")
+                queryset = queryset.filter(crimedate__day=crimedate_day)
+
+        #date range parsing
+        date_lte = self.request.query_params.get("crimedate_lte", None)
+        if date_lte is not None:
+            self.validate_date(date_lte)
+            queryset = queryset.filter(crimedate__lte=date_lte)
+            
+        date_gte = self.request.query_params.get("crimedate_gte", None)
         if date_gte is not None:
+            self.validate_date(date_gte)
             queryset = queryset.filter(crimedate__gte=date_gte)
 
-        #year parsing
-        year = self.request.query_params.get("year", None)
-        if year is not None:
-            try:
-                year = int(year)
-            except:
-                raise ParseError("Bad parameters, year must be int")
-            queryset = queryset.filter(crimedate__year=year)
-
-        #month parsing
-        month = self.request.query_params.get("month", None)
-        if month is not None:
-            try:
-                month = int(month)
-            except:
-                raise ParseError("Bad parameters, month must be int")
-            queryset = queryset.filter(crimedate__month=month)
-
-        #day parsing
-        day = self.request.query_params.get("day", None)
-        if day is not None:
-            try:
-                day = int(day)
-            except:
-                raise ParseError("Bad parameters, day must be int")
-            queryset = queryset.filter(crimedate__day=day)
-
-        return queryset
-
-    def parse_details(self, queryset):
-        
-        #weapon parsing
-        weapon = self.request.query_params.get("weapon", None)
-        if weapon is not None:
-            queryset = queryset.filter(weapon=weapon)
-
-        #crimecode parsing
-        crimecode = self.request.query_params.get("crimecode")
-        if crimecode is not None:
-            queryset = queryset.filter(crimecode=crimecode)
-
-        #description parsing
-        description = self.request.query_params.get("description")
-        if description is not None:
-            queryset = queryset.filter(description=description)
-
-        #crimetime parsing
-        crimetime = self.request.query_params.get("crimetime")
+        crimetime = self.request.query_params.get("crimetime", None)
         if crimetime is not None:
-            queryset = queryset.filter(crimetime=crimetime)
+            if "," in crimetime:
+                crimetime = crimetime.split(",")
+                for t in crimetime:
+                    self.validate_time(t)
+                queryset = queryset.filter(crimetime__in=crimetime)
+            else:
+                self.validate_time(crimetime)
+                queryset = queryset.filter(crimetime=crimetime)
+        
+        crimetime_range = self.request.query_params.get("crimetime_range", None)
+        if crimetime_range is not None:
+            crimetime_range = crimetime_range.split(",")
+            if len(crimetime_range) != 2:
+                raise ParseError("Bad parameters, crimetime_range must provide two date values")
+            self.validate_time(crimetime_range[0])
+            self.validate_time(crimetime_range[1])
+            queryset = queryset.filter(crimetime__range=crimetime_range)
 
+        crimetime_lte = self.request.query_params.get("crimetime_lte", None)
+        if crimetime_lte is not None:
+            self.validate_time(crimetime_lte)
+            queryset = queryset.filter(crimetime__lte=crimetime_lte)
+
+        crimetime_gte = self.request.query_params.get("crimetime_gte", None)
+        if crimetime_gte is not None:
+            self.validate_time(crimetime_gte)
+            queryset = queryset.filter(crimetime__gte=crimetime_gte)
+            
         return queryset
 
-class WeaponViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = WeaponSerializer
-    queryset = Inputdata.objects.values("weapon").distinct()
+    def validate_date(self, date_val):
+        try:
+            form = datetime.strptime(date_val, "%Y-%m-%d")
+        except:
+            raise ParseError("Invalid date value, must be in YYYY-MM-DD format")
+            
+    def validate_time(self, time_val):
+        try:
+            form = time.strptime(time_val, "%H:%M:%S")
+        except:
+            raise ParseError("Invalid time format, time must be in HH:MM:SS format")
 
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+
+
+class CrimeColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CrimeColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the crime instances table: weapon, crimecode, description"})
+    queryset = Crimeinstances.objects.all()
+    crime_columns = ["weapon", "crimecode", "description"]
     def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
 
+        column = self.request.query_params.get("column")
+        if column not in self.crime_columns:
+                raise ParseError("Passed column not valid")
+        
         #return a flat list of distinct values without the empty string
-        #currently need to cast weapon as char through extra() call as weapon is stored as an ENUM and sort works on an enum index basis in SQL
-        return Response(self.queryset.values_list('weapon', flat=True).order_by("weapon").exclude(weapon=""))
+        if column != "description":
+            queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val[column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        else:
+            queryset = self.queryset.all().values("crimecode__" + column).exclude(**{"crimecode__" + column: ""}).exclude(**{"crimecode__" + column:"None"}).annotate(total=Count("crimecode__" + column)).order_by("total")
+            flatten = {}
+            for val in queryset:
+                flatten[str(val["crimecode__" + column])] = val["total"]
+            values = list(flatten.keys())
+            values.sort()
+        return Response(values)
 
-    
-class NeighborhoodViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = NeighborhoodSerializer
-    queryset = Locationdata.objects.order_by().values("neighborhood").distinct()
 
-    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+class LocationColumnValueViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LocationColumnValueSerializer
+    schema = generate_swagger_schema({"column": "A column in the location table: neighborhood, post, district, premise, location"})
+    queryset = Locationdata.objects.all()
+    location_columns = ["neighborhood", "post", "district", "premise", "location"]
     def list(self, request, *args, **kwargs):
-        #original example has the following, but the below works just as well without the second filter call
-        #query set = self.filter_queryset(self.get_queryset())
+        param_keys = self.request.query_params.keys()
+        if "column" not in param_keys:
+                raise ParseError("Column is a required query parameter")
 
+        column = self.request.query_params.get("column")
+        if column not in self.location_columns:
+                raise ParseError("Passed column not valid")
+        
         #return a flat list of distinct values without the empty string
-        return Response(self.queryset.values_list('neighborhood', flat=True).order_by("neighborhood").exclude(neighborhood=""))
+        queryset = self.queryset.all().values(column).exclude(**{column: ""}).exclude(**{column:"None"}).annotate(total=Count(column)).order_by("total")
+        flatten = {}
+        for val in queryset:
+                flatten[str(val[column])] = val["total"]
+        values = list(flatten.keys())
+        values.sort()
+        return Response(values)
 
-class CountViewSet(viewsets.ReadOnlyModelViewSet):
 
-    serializer_class = CountSerializer
-    queryset = Inputdata.objects.all()
-    
-    valid_count_param_keys = ["crimedate",
-                              "crimetime",
-                              "crimecode",
-                              "location",
-                              "description",
-                              "inside_outside",
-                              "weapon",
-                              "post",
-                              "district",
-                              "neighborhood",
-                              "longitude",
-                              "latitude",
-                              "location1",
-                              "premise",
-                             ]
-    def list(self, request, *args, **kwargs):
-        search_key = self.request.query_params.keys()
+class CountViewSet(CrimeViewSet):
 
-        if len(search_key) > 1:
-            raise ParseError("Bad parameters, can only count one at a time")
-        elif len(search_key) == 0:
-            raise ParseError("Must provide a parameter with a key equal to a column in the crime db and a value equal to a value in that column.")
+        serializer_class = CountSerializer
 
-        search_key = list(self.request.query_params.keys())[0]
-        print(search_key)
-        if search_key not in self.valid_count_param_keys:
-            raise ParseError("Bad parameters, must specify column in database")
-
-        
-        
- 
-        search_value = self.request.query_params[search_key]
-        if search_key == "inside_outside":
-            if search_value == "inside":
-                search_value = "I"
-            elif search_value == "outside":
-                search_value = "O"
-        
-        search_filter = {search_key: search_value}
-        print(search_filter)
-        count = self.queryset.filter(**search_filter).count()
-        
-
-        return Response(count)
+        def list(self, request, *args, **kwargs):
+            queryset = super().get_queryset()
+            count = queryset.count()
+            return Response(count)
+            
 
 class CrimetypesViewSet(viewsets.ReadOnlyModelViewSet):
 
-    serializer_class = CrimetypesSerializer
-    queryset = Crimetypes.objects.all()
+        serializer_class = CrimetypesSerializer
+        queryset = Crimetypes.objects.all()
+
+
+class LocationdataViewSet(viewsets.ReadOnlyModelViewSet):
+        serializer_class = LocationdataSerializer
+        queryset = Locationdata.objects.all()
+
+
+
+class DateCountViewSet(CrimeViewSet):
+        serializer_class = DateCountSerializer
+        
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            
+            
+            if len(param_keys) == 0:
+                queryset = Crimeinstances.objects.all().values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)
+            else:
+                queryset = super().get_queryset()
+                queryset = queryset.values("weapon").values("crimedate__year", "crimedate__month").annotate(total=Count("pk")).order_by("crimedate")
+                flatten = {}
+                for val in queryset:
+                    if val["crimedate__year"] not in flatten.keys():
+                        flatten[val["crimedate__year"]] = {}
+                        flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                    else:
+                        if val["crimedate__month"] not in flatten[val["crimedate__year"]].keys():
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] = val["total"]
+                        else:
+                            flatten[val["crimedate__year"]][val["crimedate__month"]] += val["total"]
+                return Response(flatten)        
+
+class ColumnCountViewSet(CrimeViewSet):
+        serializer_class = ColumnCountSerializer
+        this_crime_params = crime_params_description
+        this_crime_params["column"] = "The column to count values for"
+        schema = generate_swagger_schema(this_crime_params)
+
+        valid_columns = ["weapon", "crimecode", "crimetime", "inside_outside", "neighborhood", "post", "district", "premise", "location", "description", "crimetime"]
+
+        location_columns = ["inside_outside", "neighborhood", "post", "district", "premise", "location"]
+        type_columns = ["description"]
+
+        def list(self, request, *args, **kwargs):
+            param_keys = self.request.query_params.keys()
+            if "column" not in param_keys:
+                    raise ParseError("Column is a required query parameter")
+
+            column = self.request.query_params.get("column")
+            if column not in self.valid_columns:
+                    raise ParseError("Passed column not valid")
+            
+            if len(param_keys) == 1:
+                if column not in self.location_columns and column not in self.type_columns:
+                    if(column == "crimetime"):
+                        queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).order_by("crimetime").annotate(total=Count(column))
+                    else:
+                        queryset = Crimeinstances.objects.all().values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val[column])] = val["total"]
+                        else:
+                            flatten[val[column]] = val["total"]
+                    return Response(flatten)
+                elif column not in self.type_columns:
+                    queryset = Crimeinstances.objects.all().values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
+                else:
+                    queryset = Crimeinstances.objects.all().values("crimecode__" + column, ).exclude(**{"crimecode__" + column: ""}).annotate(total=Count("crimecode__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        flatten[val["crimecode__" + column]] = val["total"]
+                    return Response(flatten)
+            else:
+                queryset = super().get_queryset()
+                if column not in self.location_columns and column not in self.type_columns:
+                        if(column == "crimetime"):
+                            queryset = queryset.values(column).exclude(**{column: None}).order_by("crimetime").annotate(total=Count(column))
+                        else:
+                            queryset = queryset.values(column).exclude(**{column: None}).annotate(total=Count(column)).order_by("total")
+                        flatten = {}
+                        for val in queryset:
+                            if column == "crimetime":
+                                flatten[str(val[column])] = val["total"]
+                            else:
+                                flatten[val[column]] = val["total"]
+                elif column not in self.type_columns:
+                    queryset = queryset.values("locationid__" + column, ).exclude(**{"locationid__" + column: ""}).annotate(total=Count("locationid__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        if column == "crimetime":
+                             flatten[str(val["locationid__" + column])] = val["total"]
+                        else:
+                            flatten[val["locationid__" + column]] = val["total"]
+                    return Response(flatten)
+                else:
+                    queryset = queryset.values("crimecode__" + column, ).exclude(**{"crimecode__" + column: ""}).annotate(total=Count("crimecode__" + column)).order_by("total")
+                    flatten = {}
+                    for val in queryset:
+                        flatten[val["crimecode__" + column]] = val["total"]
+                    return Response(flatten)
+                return Response(flatten)
+
+
+        
+
+
+class LatitudeLongitudeViewSet(CrimeViewSet):
+    serializer_class = LatitudeLongitudeSerializer
+    queryset = Crimeinstances.objects.all().order_by()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def list(self, request, *args, **kwargs):
+
+
+        queryset = super().get_queryset().filter(locationid__longitude__gte=-78, locationid__latitude__gte=39.11).values_list("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None}).distinct().annotate(total=Count("locationid"))
+        
+        flatten = queryset
+        """
+        totals = {}
+        for loc in queryset:
+            if loc["locationid__longitude"] > -78.0 and loc["locationid__latitude"] > 39.11:
+                flatten.append([loc["locationid__latitude"], loc["locationid__longitude"], loc["total"]])
+
+        
+
+
+        #original example has the following, but the below works just as well without the second filter call
+        queryset = super().get_queryset().values("locationid__latitude", "locationid__longitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
+
+        flatten = [(loc["locationid__latitude"], loc["locationid__longitude"]) for loc in queryset if loc["locationid__longitude"] > -78.0 and loc["locationid__latitude"] > 39.11]
+        return Response(flatten)
+        """
+        return Response(flatten)
+
+class LatitudeLongitudeAllViewSet(CrimeViewSet):
+    serializer_class = LatLongAllSerializer
+    queryset = Crimeinstances.objects.all().order_by()
+
+    #to return all distinct values of the queryset, must override the list method and call values_list on the queryset
+    def get_queryset(self):
+
+        queryset = super().get_queryset().order_by("locationid__latitude").exclude(**{"locationid__latitude": None, "locationid__longitude": None})
+            
+        return queryset
+
 
